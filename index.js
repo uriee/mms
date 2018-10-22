@@ -1,6 +1,5 @@
 const express = require('express');
 const User = require('./models/User')
-const Employee = require('./models/Employee')
 const {fetch, update, insert, fetchByName} = require('./models/Schemas')
 const app = express();
 const bodyParser = require('body-parser');
@@ -25,8 +24,10 @@ app.use(function(req, res, next) {
 app.post('/mymes/signup', User.signup)
 app.post('/signin', User.signin)
 app.post('/mymes/signin', User.signin)
-app.post('/mymes/update', Employee.upd)
 app.post('/mymes/insert/emp', (req,res) => insert(req,res,'employees'))
+app.post('/mymes/update/emp', (req,res) => update(req,res,'employees'))
+app.post('/mymes/insert/part', (req,res) => insert(req,res,'parts'))
+app.post('/mymes/update/part', (req,res) => update(req,res,'parts'))
 
 router.get('/t', function(req, res) {
     res.json({

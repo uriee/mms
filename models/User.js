@@ -1,5 +1,6 @@
 const bcrypt  = require('bcrypt')  // bcrypt encrypt the signup password to be saved in db
 const crypto  = require('crypto')  // crypto decrypt the login password to be chacked against the db
+
 //db connection configuration
 const {pgconfig} = require('../DBConfig.js')
 const pgp = require('pg-promise')();
@@ -17,8 +18,8 @@ const hashPassword = (password) => {
 // Create new user in db
 const createUser = (user) => {
   return db.one(
-    'INSERT INTO "MyMES"."USERS"("USERNAME", "PASSWORD_DIGEST", "TOKEN", "CREATED_AT") VALUES ($1, $2, $3, $4) RETURNING "USERID", "USERNAME", "CREATED_AT", "TOKEN"',
-    [user.username, user.password_digest, user.token, new Date()]
+    'insert into mymes.users(username, password_digest, token, created_at, email, "currentAuthority") VALUES ($1, $2, $3, $4, $5, $6) RETURNING  username, created_at, token, email, "currentAuthority"' ,
+    [user.userName, user.password_digest, user.token, new Date(), user.email, user.currentAuthority]
   )
 }
 
@@ -33,14 +34,14 @@ const createToken = () => {
 
 //fetches user's data from db 
 const findUser = (userReq) => {
-  console.log('finduser:',userReq)
-  return db.one('SELECT * FROM "MyMES"."USERS" WHERE "USERNAME" = $1', [userReq.username])
+  return db.one('select * from mymes.users where username = $1', [userReq.userName])
 }
+
 
 //check if the users's input password match the user data password
 const checkPassword = (reqPassword, foundUser) => {
   return new Promise((resolve, reject) =>
-    bcrypt.compare(reqPassword, foundUser.PASSWORD_DIGEST, (err, response) => {
+    bcrypt.compare(reqPassword, foundUser.password_digest, (err, response) => {
         if (err) {
           reject(err)
         }
@@ -55,24 +56,26 @@ const checkPassword = (reqPassword, foundUser) => {
 
 //update the users TOKEN field in db
 const updateUserToken = (token, user) => {
-  return db.one('UPDATE "MyMES"."USERS" SET "TOKEN" = $1 WHERE "USERID" = $2 RETURNING "USERID", "USERNAME", "TOKEN"', [token, user.USERID])
+  return db.one('update mymes.users set token = $1 where id = $2 returning id, username, token', [token, user.id])
 }
 
 
 const findByToken = (token) => {
-  return db.one('SELECT * FROM "MyMES"."USERS" WHERE "TOKEN" = $1', [token])
+  return db.one('select * from mymes.users where token = $1', [token])
 }
+
+const getAuthority = () => {return {status: 'ok', type:'account'}}
 
 const authenticate = (userReq) => {
   return findByToken(userReq.token)
     .then((user) => {
-      console.log("user",user,user.USERNAME == userReq.username)
-      return (user.USERNAME == userReq.username) 
+      console.log("user",user,user.USERNAME == userReq.userName)
+      return (user.USERNAME == userReq.userName) 
   }).catch((err) => false)
 }
 
-const signup = (request, response) => {
-  const user = request.body
+const signup = (request, response, next) => {
+   const user = request.body
   hashPassword(user.password)
     .then((hashedPassword) => {
       delete user.password
@@ -91,7 +94,6 @@ const signup = (request, response) => {
 const signin = (request, response) => {
   const userReq = request.body
   let user
-
   findUser(userReq)
     .then(foundUser => {
       user = foundUser
@@ -99,12 +101,17 @@ const signin = (request, response) => {
     })
     .then((res) => createToken())
     .then(token => updateUserToken(token, user))
-    .then(() => {
-      delete user.PASSWORD_DIGEST
+    .then(x => getAuthority(user.id))
+    .then((auth) => {
+      user = {...user, ...auth , name: user.username}
+      delete user.password_digest
       console.log(user)
       response.status(200).json(user)
     })
-    .catch((err) => console.error(err))
+    .catch((err) => {
+      response.status(401).json(user)
+      console.error(err)
+    })
 }
 
 const logoff = (request, response) => {}

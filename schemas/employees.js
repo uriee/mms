@@ -33,6 +33,7 @@ exports.employees = {
 		schema: {
 			pkey: 'emp_id' ,
 
+
 			fkeys: {
 				lang_id : {value : 'lang_id'},
 				dept_id: {query : `select id from mymes.departments where name = $1;`, value : 'dept_name'},
@@ -45,14 +46,15 @@ exports.employees = {
 						{field: 'dept_id', fkey : 'dept_id'},
 						{field: 'user_id', fkey : 'user_id'},
 						{field: 'name' , variable : 'emp_name'},
+						{key: 'id'}
 				   ]
 				},
 				employees_t :{
 					fields : [
 						{field: 'fname', variable: 'fname'},
 						{field: 'sname', variable: 'sname'},
-						{field: 'emp_id', fkey :'emp_id'},
-						{field: 'lang_id', fkey :'lang_id'},
+						{field: 'emp_id', fkey :'emp_id' ,key: 'id'},
+						{field: 'lang_id', fkey :'lang_id', key: 'lang_id'},
 					],
 					fill: {field : 'lang_id' , values : languagesArray}
 				}
