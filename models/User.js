@@ -29,7 +29,7 @@ const createToken = () => {
     crypto.randomBytes(16, (err, data) => {
       err ? reject(err) : resolve(data.toString('base64'))
     })
-  })
+  }).then(x => x)
 }
 
 //fetches user's data from db 
@@ -66,7 +66,23 @@ const findByToken = (token) => {
 
 const getAuthority = () => {return {status: 'ok', type:'account'}}
 
-const authenticate = (userReq) => {
+const authenticate = async (req,res,next) => {
+  console.log('~~~~~~~~~~~~~',req.method,req.query)
+  const Utoken = (req.method == 'GET' ? req.query.token : req.body.token)
+  const userName = (req.method == 'GET' ? req.query.user : req.body.user)
+    console.log('~~~~~~~~~~~~~',Utoken,userName)
+  const auth = await findByToken(Utoken)
+    .then((user) => {
+      console.log("user",user,user.username == userName)
+      return (user.username == userName) 
+  }).catch((err) => false)
+console.log("user auth:",auth)    
+  if (auth) return next(req,res)
+  else return auth;  
+}
+
+const authenticate_old = (userReq) => {
+  console.logf('in Authenticate:',userReq)
   return findByToken(userReq.token)
     .then((user) => {
       console.log("user",user,user.USERNAME == userReq.userName)

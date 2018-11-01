@@ -1,6 +1,6 @@
 const express = require('express');
 const User = require('./models/User')
-const {fetch, update, insert, fetchByName} = require('./models/Schemas')
+const {fetch,fetch2, update, insert, fetchByName} = require('./models/Schemas')
 const app = express();
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -36,7 +36,9 @@ router.get('/t', function(req, res) {
 });
 
 router.get('/employees', (req,res) => fetch(req, res, 'employees'))
-
+router.get('/emp', (req,res) => fetch(req, res, 'employees'))
+router.get('/employees2', (req,res) => fetch2(req, res, 'employees'))
+router.get('/part', (req,res) => fetch(req, res, 'parts'))
 
 
 app.post('/secure', async (request, response) => {

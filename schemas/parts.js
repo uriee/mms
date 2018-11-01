@@ -11,42 +11,71 @@ const languagesArray = [1,2,3]
 */
 exports.parts = {
 		sql: {
-			single: `select part.name, part_t.desc_t as desc ,part.type, 
-				from mymes.part as part, mymes.part_t as part_t
-				and part_t.part_id = part.id
-				and part_t.lang_id = $2
-				and part.name = $1;`	,
+			all: `select part.id, part.name, part_t.description , part_status.name as part_status, part.type 
+					from mymes.part as part left join mymes.part_t as part_t on part.id = part_t.part_id, 
+					mymes.part_status 
+					where part_status.id = part.part_status_id 
+					and part_t.lang_id = $1;`,
 
-			all: `select part.name, part_t.desc_t as desc ,part.type, 
-				from mymes.part as part, mymes.part_t as part_t
-				and part_t.part_id = part.id
-				and part_t.lang_id = $1
-				order by part.name;`
+			choosers :{
+				part_status: `select name from mymes.part_status;`
+			}
+
 		},
 
 		schema: {
 			pkey: 'part_id' ,
 
-
 			fkeys: {
-				lang_id : {value : 'part_id'},
+				lang_id : {
+					value : 'lang_id'
+				},
+				part_status_id: {
+					query : `select id from mymes.part_status where name = $1;`,
+					 value : 'part_status'
+					}
 			},
 
 			tables : {
 				part :{
 					fields : [
-						{field: 'name' , variable : 'part_name'},
-						{field: 'status', variable: 'status'},
-						{key: 'id'}
+						{
+							field: 'part_status_id',
+							 fkey : 'part_status_id'
+							},
+						{
+							field: 'type',
+							variable : 'type'
+							},
+						{
+							field: 'name',
+							variable : 'name'
+						},
+						{
+							key: 'id'
+						}
 				   ]
 				},
 				part_t :{
 					fields : [
-						{field: 'desc_t', variable: 'desc'},
-						{field: 'part_id', fkey :'part_id' ,key: 'id'},
-						{field: 'lang_id', fkey :'lang_id', key: 'lang_id'},
+						{
+							field: 'description',
+							variable: 'description'
+							},
+						{
+							field: 'part_id',
+							 fkey :'part_id',
+							 key: 'id'},
+						{
+							field: 'lang_id',
+							 fkey :'lang_id',
+							  key: 'lang_id'
+							},
 					],
-					fill: {field : 'lang_id' , values : languagesArray}
+					fill: {
+						field : 'lang_id',
+						values : languagesArray
+					}
 				}
 			}
 		}	
