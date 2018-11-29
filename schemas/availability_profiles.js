@@ -1,5 +1,4 @@
 const {languagesArray} = require('./schema_conf.js')
-/*---*/
 /*  sql : queries for fetching data
 	sql.single : fetches single record
 	sql.all : fetch few records
@@ -7,47 +6,60 @@ const {languagesArray} = require('./schema_conf.js')
 	schema.pkey : the pkey field name for this entity
 	schema.fkeys : keys that need to be fetched from server in order to preform insert/update
 	schema.tables : the tables that need to be updated 
-*/
-exports.departments = {
-		sql: {
-			all: `select departments.id,name,description from mymes.departments as departments, mymes.departments_t as departments_t
-					where departments_t.dept_id = departments.id
-					and departments_t.lang_id = $1`,					
-			choosers :{
-				}
 
+*//*,json_agg(json_build_object('id', availability_profiles.id,'weekday', weekday, 'from', from_time, 'to', to_time)) as availabilities*/
+exports.availability_profiles = {
+		sql: {
+			all: `select availability_profiles.id, availability_profiles.name, availability_profiles.active as active, availability_profiles_t.description
+			    from mymes.availability_profiles as availability_profiles left join mymes.availability_profiles_t as availability_profiles_t on availability_profiles.id = availability_profiles_t.ap_id  
+				where availability_profiles_t.lang_id = $1 `,
+
+			final: '',				
+
+			choosers :{
+			},
+
+		},
+		
+		post_insert: {
+			function: 'set_availabilities',
+			parameters: ['id']
 		},
 
 		schema: {
-			pkey: 'dept_id' ,
+			pkey: 'ap_id' ,
 
 			fkeys: {
-				lang_id : {
-					value : 'lang_id'
-				},
+		
 			},
 
 			tables : {
-				departments :{
+				availability_profiles :{
 					fields : [
+					
 						{
 							field: 'name',
 							variable : 'name'
 						},
 						{
+							field: 'active',
+							variable : 'active'
+						},
+
+						{
 							key: 'id'
 						}
 				   ]
 				},
-				departments_t :{
+				availability_profiles_t :{
 					fields : [
 						{
 							field: 'description',
-							variable: 'description'
+							 variable: 'description'
 							},
 						{
-							field: 'dept_id',
-							 fkey :'dept_id',
+							field: 'ap_id',
+							 fkey :'ap_id',
 							 key: 'id'},
 						{
 							field: 'lang_id',

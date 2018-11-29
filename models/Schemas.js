@@ -2,9 +2,29 @@
 const {pgconfig} = require('../DBConfig.js')
 const pgp = require('pg-promise')();
 const db = pgp(pgconfig);
+const {flatten} = require('lodash')
+
 const {employees} = require('../schemas/employees.js')
 const {parts} = require('../schemas/parts.js')
-const schemas = {employees : employees, parts : parts};
+const {departments} = require('../schemas/departments.js')
+const {users} = require('../schemas/users.js')
+const {machines} = require('../schemas/machines.js')
+const {resource_groups} = require('../schemas/resource_groups.js')
+const {resources} = require('../schemas/resources.js')
+const {availability_profiles} = require('../schemas/availability_profiles.js')
+const {availabilities} = require('../schemas/availabilities.js') 
+
+const schemas = {
+	employees : employees,
+	parts : parts,
+	departments : departments,
+	users : users,
+	machines: machines,
+	resource_groups : resource_groups,
+	resources : resources,	
+	availability_profiles : availability_profiles,
+	availabilities : availabilities
+	}
 
 const fillTemplate = function(templateString, templateVars){
 	
@@ -14,6 +34,7 @@ const fillTemplate = function(templateString, templateVars){
 //fetches Employee data from db 
 const fetchByName = (request, response, entity) => {
 	const param = request.body
+
   	return db.one(schemas[entity].sql.single
 				, [param.name,param.lang]
 				).then((emp) => response.status(201).json({ emp }))
@@ -23,13 +44,30 @@ const fetchByName = (request, response, entity) => {
     			})
 }
 
-
+/*
+Populate the response data from DB with the requested data of a certain entity
+*/
 const fetch = async (request, response, entity) => {
+	const {lang,pageSize,currentPage,zoom} = request.query
+	/*console.log(schemas[entity],entity)*/
+	const tables = schemas[entity].schema.tables	
+	const filters = flatten(	
+							Object.keys(tables)
+							.map(table=> tables[table].fields
+								.map(x => ({field : `${table}.${x.field || x.key}`,value : request.query[x.field || x.key]}))
+								)
+							).filter(field => field.value)
+	
 	try {
-		const main = await db.any(schemas[entity].sql.all,[request.query.lang]).then(x=>x)
+		const filterSql = filters.reduce((string, filter)=> string+` and ${filter.field} like '%${filter.value}%'`, '')
+		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
+		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
+		const sql = schemas[entity].sql.all + (zoom === '1' ? zoomSql  : filterSql)  + (schemas[entity].sql.final || '') + ' limit 100;'
+
+		const main = await db.any(sql,[lang]).then(x=>x)
+		const type = !main[0] ? 201 : 201
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
 		const chooserQueries = Object.values(schemas[entity].sql.choosers)	
-		console.log("fetch2:",chooserId,chooserQueries,request.query.lang)
 	    const chooserResaults = await Promise.all(chooserQueries.map(choose => db.any(choose,[request.query.lang])))
 	    const choosers = {}
 	    chooserId.map((ch,i) => { choosers[ch] = chooserResaults[i] }) 
@@ -37,10 +75,10 @@ const fetch = async (request, response, entity) => {
 	    	main : main,
 	    	choosers: choosers
 	    	}
-	    response.status(201).json(ret)
+	    response.status(type).json(ret)
 	    return ret
 		} catch(err) {
-			response.status(401)
+			response.status(403)
 			console.log(err)
 		}
 }
@@ -60,7 +98,16 @@ const getFkeys = async (fkeys,params) => {
 		const fkeysNames = Object.keys(fkeys)
 		const keyValues = await Promise.all(fkeysNames.map(async (key) => {
 			const query = fkeys[key]
-			return query.hasOwnProperty('query') ? db.one(query.query, [params[query.value]]).then(x => x.id) : params[query.value]
+	
+			const parameter = Array.isArray(params[query.value]) ? params[query.value].toString() :
+								[params[query.value]]
+			var res = query.hasOwnProperty('query') ?
+						 await db.any(query.query, parameter)
+					  	 .then(x => {console.log("----------------------",x,key,fkeys[key]);
+					  	  return Array.isArray(x)? x.map(x=> x.id) : x.id}) :
+					  params[query.value]
+	
+			return res
 		})).then(x => x)
 
 		fkeysNames.map((name,i) => {
@@ -79,20 +126,28 @@ const getFkeys = async (fkeys,params) => {
 
 const insert = async (req, res, entity) => {
 	const params = req.body
-				console.log("---", params)	
 	const schema = schemas[entity].schema
+	const post_insert = schemas[entity].post_insert
 	const id  = schema.pkey
 	try{
 		const keys = await getFkeys(schema.fkeys,params)
 		const tables = Object.keys(schema.tables)
 		const maintable = schema.tables[tables[0]]
-		let fields = maintable.fields.filter(x => x.field).map(x => x.field)
-		let values = maintable.fields.filter(x => x.field).map(x =>  x.hasOwnProperty('fkey') ? keys[x.fkey] : `'${params[x.variable]}'`)
+		const insertFields = maintable.fields.filter(x => x.field && (x.value || keys[x.fkey]>'' ||params[x.variable]>''))
+		let fields = insertFields.map(x => x.field)
+
+		let values = insertFields
+					.map(x => x.hasOwnProperty('value') ? 
+						`'${x.value}'` :
+						x.hasOwnProperty('fkey') ?
+						(Array.isArray(keys[x.fkey]) && keys[x.fkey].length > 1 ? `'{${keys[x.fkey]}}'` : keys[x.fkey]) :
+						`'${params[x.variable]}'`
+					)
 		let sql = `insert into mymes.${tables[0]}(${fields}) values(${values}) returning id;`
 		console.log("insert query maintable",sql)
 		keys[id] = await db.one(sql).then(x => x.id)
 		tables.shift()
-		const ret  = tables.map(async (tablename)=>{
+		const ret  = await Promise.all(tables.map(async (tablename)=>{
 			const table = schema.tables[tablename]
 			const fields = table.fields.filter(x => x.field).map(x => x.field)
 			if (table.hasOwnProperty('fill')) {
@@ -101,33 +156,37 @@ const insert = async (req, res, entity) => {
 					let values = table.fields.filter(x => x.field )
 											 .map(x =>  x.field === field ? val :x.hasOwnProperty('fkey') ? keys[x.fkey] : `'${params[x.variable+(val === params['lang_id'] ? '_t' : '')]}'`)
 					let sql = `insert into mymes.${tablename}(${fields}) values(${values}) returning *;`
-					console.log('insert query in fill',sql)
 					return db.one(sql).then(x => x)
 				}))
 
 			}
 			else {
-				/*let defaults = table.fields.filter(x => x.default && x.field).reduce(obj,default) => {
-					let def = default.string  ? fillTemplate(default.string.tamplate ...default.string.values) : 
-							  default.num  ? fillTemplate(default.string.tamplate ...default.string.values) :	*/
 				let values = table.fields.filter(x => x.field).map(x =>  x.hasOwnProperty('fkey') ? keys[x.fkey] : `'${params[x.variable]}'`)
 				let sql = `insert into mymes.${tablename}(${fields}) values(${values}) returning *;`
-				console.log('insert query no fill:',sql)
 				let ret =  await db.one(sql).then(x => x)
 				return ret
 			}
-		})
+		}))
+		console.log(ret[0])
+		const new_id = ret[0] && Array.isArray(ret[0]) ? ret[0][0][id] : ret[0]['id']
+		const post = post_insert && db.func(post_insert.function, new_id)
+											    .then(data => {
+											        console.log('DATA:', data); 
+											    })
+											    .catch(error => {
+											        console.log('ERROR:', error); 
+											    });
+
 		res.status(200).json(ret)
 	} catch(err) {
 		console.log(err)
 		res.status(401)
 	}
 }
-const fetch2 = {}
 
 const update = async (req, res, entity) => {
 	let params = req.body
-	console.log("---", params)
+	console.log("update ---", params)
 	const schema = schemas[entity].schema
 	const tables= schema.tables
 	const tableNames  = Object.keys(tables)
@@ -139,17 +198,21 @@ const update = async (req, res, entity) => {
 	try {
 		const fkeys = await getFkeys(fkSchema, params)
 		allParams = Object.assign({},params,fkeys)
+		Object.keys(allParams).forEach(key => {
+			value = allParams[key]
+			allParams[key] = Array.isArray(value) && value.length > 1 ? `{${value}}` : value})
 		const ret = Promise.all(tableNames.filter(tn => tables[tn].fields.some(field => allParams.hasOwnProperty(field.field)))
 				  .map(tn =>{
 				  	const table = schema.tables[tn]
 				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field))
-				  							 .map(field => ({set : field.field, to: allParams[field.field]}))
+				  							 .map(field => ({set : field.field, to: field.array ? allParams[field.field] : allParams[field.field]}))
+					/*console.log('~~~********:',sets)*/
 				  	const wheres = table.fields.filter(field => params.hasOwnProperty(field.key))
 				  							   .map(field => ({where : field.field > '' ? field.field : field.key , equals: params[field.key]}))
 				  	const sqlSet = sets.reduce((old,set) => old + `${set.set} = '${set.to}',`,'').slice(0,-1)
 				  	const sqlWhere = wheres.reduce((old,where) => old + `${where.where} = '${where.equals}' and `,'').slice(0,-5)
 				  	const sql = `update mymes.${tn} set ${sqlSet} where ${sqlWhere} returning 1;`
-				  	console.log("sql:",sql)
+				  	console.log("update sql:",sql)
 				  	const ret  = runQuery(sql)
 				  	return ret
 		}))
@@ -164,5 +227,5 @@ const update = async (req, res, entity) => {
 
 
 module.exports = {
-  fetch, fetch2 ,fetchByName, update, insert
+  fetch,fetchByName, update, insert
 }

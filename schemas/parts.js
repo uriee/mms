@@ -1,5 +1,4 @@
-//const {conf} = require('./Conf.js')
-const languagesArray = [1,2,3]
+const {languagesArray} = require('./schema_conf.js')
 /*---*/
 /*  sql : queries for fetching data
 	sql.single : fetches single record
@@ -15,7 +14,7 @@ exports.parts = {
 					from mymes.part as part left join mymes.part_t as part_t on part.id = part_t.part_id, 
 					mymes.part_status 
 					where part_status.id = part.part_status_id 
-					and part_t.lang_id = $1;`,
+					and part_t.lang_id = $1 `,					
 
 			choosers :{
 				part_status: `select name from mymes.part_status;`
