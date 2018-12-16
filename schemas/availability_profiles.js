@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 *//*,json_agg(json_build_object('id', availability_profiles.id,'weekday', weekday, 'from', from_time, 'to', to_time)) as availabilities*/
 exports.availability_profiles = {
 		sql: {
-			all: `select availability_profiles.id, availability_profiles.name, availability_profiles.active as active, availability_profiles_t.description
+			all: `select availability_profiles.id, availability_profiles.name, availability_profiles.active , availability_profiles.tags, availability_profiles_t.description
 			    from mymes.availability_profiles as availability_profiles left join mymes.availability_profiles_t as availability_profiles_t on availability_profiles.id = availability_profiles_t.ap_id  
 				where availability_profiles_t.lang_id = $1 `,
 
@@ -45,7 +45,15 @@ exports.availability_profiles = {
 							field: 'active',
 							variable : 'active'
 						},
-
+						{
+							"field": "tags",
+							"variable" : "tags"
+						},						
+						{
+							field: 'row_type',
+							variable : 'row_type',
+							value : 'availability_profile'
+						},
 						{
 							key: 'id'
 						}

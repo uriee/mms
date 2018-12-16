@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.parts = {
 		sql: {
-			all: `select part.id, part.name, part_t.description , part_status.name as part_status, part.type 
+			all: `select part.id, part.name, part_t.description , part_status.name as part_status, part.type, part.tags
 					from mymes.part as part left join mymes.part_t as part_t on part.id = part_t.part_id, 
 					mymes.part_status 
 					where part_status.id = part.part_status_id 
@@ -50,6 +50,15 @@ exports.parts = {
 							field: 'name',
 							variable : 'name'
 						},
+						{
+							field: 'row_type',
+							variable : 'row_type',
+							value : 'part'
+						},						
+						{
+							field: 'tags',
+							variable : 'tags'
+						},						
 						{
 							key: 'id'
 						}

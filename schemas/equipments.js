@@ -10,7 +10,8 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.equipments = {
 		sql: {
-			all: `select equipments.id, equipments.name , equipments.active as active, equipments_t.description, dept.name as dept_name,ap.name as ap_name, equipments.mac_address ,equipments.tags 
+			all: `select equipments.id, equipments.name , equipments.active as active, equipments_t.description, dept.name as dept_name, 
+			ap.name as ap_name, equipments.mac_address ,equipments.tags, equipments.serial, equipments.equipment_type
 				from mymes.equipments as equipments left join mymes.equipments_t as equipments_t on equipments.id = equipments_t.equipment_id ,
 				mymes.availability_profiles as ap, mymes.departments as dept
 				where equipments.availability_profile_id = ap.id
@@ -61,12 +62,20 @@ exports.equipments = {
 							variable : 'active'
 						},
 						{
+							field: 'serial',
+							variable : 'serial'
+						},
+						{
+							field: 'equipment_type',
+							variable : 'equipment_type'
+						},
+						{
 							field: 'mac_address',
 							variable : 'mac_address'
 						},
 						{
-							field: 'type',
-							variable : 'type',
+							field: 'row_type',
+							variable : 'row_type',
 							value : 'equipment'
 						},						
 						{

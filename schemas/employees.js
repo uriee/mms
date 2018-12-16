@@ -10,7 +10,9 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.employees = {
 		sql: {
-			all: `select employees.id, employees.name , employees.active as active, employees_t.fname, employees_t.sname, dept.name as dept_name,ap.name as ap_name, usr.username as user_name
+			all: `select employees.id, employees.name , employees.active as active, employees_t.fname, employees_t.sname, 
+				dept.name as dept_name,ap.name as ap_name, usr.username as user_name, employees.tags,
+				employees.id_n, employees.clock_n, employees.salary_n  
 				from mymes.employees as employees left join mymes.employees_t as employees_t on employees.id = employees_t.emp_id 
 				left join mymes.users as usr on usr.id = employees.user_id,
 				mymes.availability_profiles as ap, mymes.departments as dept
@@ -70,9 +72,25 @@ exports.employees = {
 							field: 'active',
 							variable : 'active'
 						},	
-																	{
-							field: 'type',
-							variable : 'type',
+						{
+							field: 'id_n',
+							variable : 'id_n'
+						},
+						{
+							field: 'clock_n',
+							variable : 'clock_n'
+						},
+						{
+							field: 'salary_n',
+							variable : 'salary_n'
+						},
+						{
+							"field": "tags",
+							"variable" : "tags"
+						},						
+						{
+							field: 'row_type',
+							variable : 'row_type',
 							value : 'employee'
 						},
 						{

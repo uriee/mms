@@ -8,13 +8,12 @@
 */
 exports.users = {
 		sql: {
-			all: `select  users.id as key, users.id, username as name, profile.name as "currentAuthority", users.email, users.title, users.created_at, ws.name as ws_name, users.tags
+			all: `select  users.id as key, users.id, username as name, profile.name as "currentAuthority", users.email, users.title, users.created_at, users.tags
 					from mymes.users as users left join mymes.profiles as profile on users.profile_id = profile.id
-					left join mymes.work_spaces as ws on users.ws = ws.id where 1=1 `,				
+					where 1=1 `,				
 
 			choosers :{
 				profiles: `select name from mymes.profiles;`,
-				ws: `select name from mymes.work_spaces;`,				
 			},
 		},
 
@@ -27,10 +26,6 @@ exports.users = {
 					query : `select id from mymes.profiles where name = $1;`,
 					 value : 'currentAuthority'
 					},
-				ws_id: {
-					query : `select id from mymes.profiles where name = $1;`,
-					 value : 'ws_name'
-					},					
 			},
 
 			tables : {
@@ -40,10 +35,6 @@ exports.users = {
 							field: 'profile_id',
 							 fkey : 'profile_id'
 							},
-						{
-							field: 'ws_id',
-							 fkey : 'ws_id'
-							},							
 						{
 							field: 'username',
 							variable : 'name'

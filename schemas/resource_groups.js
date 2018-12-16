@@ -10,8 +10,8 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.resource_groups = {
 		sql: {
-			all: `select resource_groups.id, resource_groups.name , resource_groups.active as active, resource_groups.is_shift as is_shift, resource_groups_t.description,
-			    dept.name as dept_name, ap.name as ap_name, array_agg(resources.name) as resource_names,array_agg(resources.type) as resource_types
+			all: `select resource_groups.id, resource_groups.name , resource_groups.active , resource_groups_t.description, resource_groups.active , resource_groups.tags, 
+			    dept.name as dept_name, ap.name as ap_name, array_agg(resources.name) as resource_names,array_agg(resources.row_type) as resource_types
 				from mymes.resource_groups as resource_groups left join mymes.resource_groups_t as resource_groups_t on resource_groups.id = resource_groups_t.resource_group_id
 				left join mymes.resources as resources on resources.id = any(resource_groups.resource_ids),
 				mymes.availability_profiles as ap, mymes.departments as dept
@@ -19,7 +19,7 @@ exports.resource_groups = {
 				and resource_groups.dept_id = dept.id
 				and resource_groups_t.lang_id = $1 `,
 
-			final: ' group by 1,2,3,4,5,6,7 ',				
+			final: ' group by 1,2,3,4,5,6,7,8 ',				
 
 			choosers :{
 				departments: `select name from mymes.departments;`,
@@ -72,18 +72,18 @@ exports.resource_groups = {
 							variable : 'active'
 						},
 						{
-							field: 'type',
-							variable : 'type',
-							value : 'group'
+							field: 'row_type',
+							variable : 'row_type',
+							value : 'resource_group'
 						},	
-						{
-							field: 'is_shift',
-							variable : 'is_shift'
-						},
 						{
 							field: 'resource_ids',
 							fkey : 'resource_ids',
 						},
+						{
+							"field": "tags",
+							"variable" : "tags"
+						},	
 						{
 							key: 'id'
 						}

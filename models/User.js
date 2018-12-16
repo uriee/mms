@@ -2,10 +2,7 @@ const bcrypt  = require('bcrypt')  // bcrypt encrypt the signup password to be s
 const crypto  = require('crypto')  // crypto decrypt the login password to be chacked against the db
 
 //db connection configuration
-const {pgconfig} = require('../DBConfig.js')
-const pgp = require('pg-promise')();
-const db = pgp(pgconfig);
-
+const {db} = require('../DBConfig.js')
 // construct the hashed password from the users password
 const hashPassword = (password) => {
   return new Promise((resolve, reject) =>

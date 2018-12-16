@@ -8,18 +8,19 @@ const {languagesArray} = require('./schema_conf.js')
 	schema.fkeys : keys that need to be fetched from server in order to preform insert/update
 	schema.tables : the tables that need to be updated 
 */
-exports.departments = {
+exports.malfunction_types = {
 		sql: {
-			all: `select departments.id,name,tags,description from mymes.departments as departments, mymes.departments_t as departments_t
-					where departments_t.dept_id = departments.id
-					and departments_t.lang_id = $1`,					
+			all: `select malfunction_types.id, malfunction_types.name , malfunction_types_t.description  
+				from mymes.malfunction_types as malfunction_types left join mymes.malfunction_types_t as malfunction_types_t on malfunction_types.id = malfunction_types_t.malfunction_type_id 
+				where malfunction_types_t.lang_id = $1 `,
+
 			choosers :{
-				}
+			},
 
 		},
 
 		schema: {
-			pkey: 'dept_id' ,
+			pkey: 'malfunction_type_id' ,
 
 			fkeys: {
 				lang_id : {
@@ -28,37 +29,28 @@ exports.departments = {
 			},
 
 			tables : {
-				departments :{
+				malfunction_types :{
 					fields : [
+			
 						{
 							field: 'name',
 							variable : 'name'
 						},
 						{
-							field: 'tags',
-							variable : 'tags'
-						},
-						{
-							field: 'row_type',
-							variable : 'row_type',
-							value : 'dept'
-						},						
-						{
 							key: 'id'
 						}
 				   ]
 				},
-				departments_t :{
+				malfunction_types_t :{
 					fields : [
 						{
 							field: 'description',
-							variable: 'description'
+							 variable: 'description'
 							},
 						{
-							field: 'dept_id',
-							 fkey :'dept_id',
-							 key: 'id'
-						},
+							field: 'malfunction_type_id',
+							 fkey :'malfunction_type_id',
+							 key: 'id'},
 						{
 							field: 'lang_id',
 							 fkey :'lang_id',

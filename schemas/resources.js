@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.resources = {
 		sql: {
-			all: `select resources.id, resources.name , resources.active as active, resources.type as type, dept.name as dept_name, ap.name as ap_name
+			all: `select resources.id, resources.name , resources.active as active, resources.row_type as type, dept.name as dept_name, ap.name as ap_name
 				from mymes.resources as resources , mymes.availability_profiles as ap, mymes.departments as dept
 				where resources.availability_profile_id = ap.id
 				and resources.dept_id = dept.id` ,

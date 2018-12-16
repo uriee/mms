@@ -8,18 +8,19 @@ const {languagesArray} = require('./schema_conf.js')
 	schema.fkeys : keys that need to be fetched from server in order to preform insert/update
 	schema.tables : the tables that need to be updated 
 */
-exports.departments = {
+exports.repair_types = {
 		sql: {
-			all: `select departments.id,name,tags,description from mymes.departments as departments, mymes.departments_t as departments_t
-					where departments_t.dept_id = departments.id
-					and departments_t.lang_id = $1`,					
+			all: `select repair_types.id, repair_types.name , repair_types_t.description  
+				from mymes.repair_types as repair_types left join mymes.repair_types_t as repair_types_t on repair_types.id = repair_types_t.repair_type_id 
+				where repair_types_t.lang_id = $1 `,
+
 			choosers :{
-				}
+			},
 
 		},
 
 		schema: {
-			pkey: 'dept_id' ,
+			pkey: 'repair_type_id' ,
 
 			fkeys: {
 				lang_id : {
@@ -28,37 +29,28 @@ exports.departments = {
 			},
 
 			tables : {
-				departments :{
+				repair_types :{
 					fields : [
+			
 						{
 							field: 'name',
 							variable : 'name'
 						},
 						{
-							field: 'tags',
-							variable : 'tags'
-						},
-						{
-							field: 'row_type',
-							variable : 'row_type',
-							value : 'dept'
-						},						
-						{
 							key: 'id'
 						}
 				   ]
 				},
-				departments_t :{
+				repair_types_t :{
 					fields : [
 						{
 							field: 'description',
-							variable: 'description'
+							 variable: 'description'
 							},
 						{
-							field: 'dept_id',
-							 fkey :'dept_id',
-							 key: 'id'
-						},
+							field: 'repair_type_id',
+							 fkey :'repair_type_id',
+							 key: 'id'},
 						{
 							field: 'lang_id',
 							 fkey :'lang_id',
