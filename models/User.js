@@ -15,7 +15,7 @@ const hashPassword = (password) => {
 // Create new user in db
 const createUser = (user) => {
   return db.one(
-    'insert into mymes.users(username, password_digest, token, created_at, email, "currentAuthority") VALUES ($1, $2, $3, $4, $5, $6) RETURNING  username, created_at, token, email, "currentAuthority"' ,
+    'insert into users(username, password_digest, token, created_at, email, "currentAuthority") VALUES ($1, $2, $3, $4, $5, $6) RETURNING  username, created_at, token, email, "currentAuthority"' ,
     [user.userName, user.password_digest, user.token, new Date(), user.email, user.currentAuthority]
   )
 }
@@ -31,7 +31,7 @@ const createToken = () => {
 
 //fetches user's data from db 
 const findUser = (userReq) => {
-  return db.one('select * from mymes.users where username = $1', [userReq.userName])
+  return db.one('select * from users where username = $1', [userReq.userName])
 }
 
 
@@ -53,12 +53,12 @@ const checkPassword = (reqPassword, foundUser) => {
 
 //update the users TOKEN field in db
 const updateUserToken = (token, user) => {
-  return db.one('update mymes.users set token = $1 where id = $2 returning id, username, token', [token, user.id])
+  return db.one('update users set token = $1 where id = $2 returning id, username, token', [token, user.id])
 }
 
 
 const findByToken = (token) => {
-  return db.one('select * from mymes.users where token = $1', [token])
+  return db.one('select * from users where token = $1', [token])
 }
 
 const getAuthority = () => {return {status: 'ok', type:'account'}}

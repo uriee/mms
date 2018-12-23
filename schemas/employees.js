@@ -14,7 +14,7 @@ exports.employees = {
 				dept.name as dept_name,ap.name as ap_name, usr.username as user_name, employees.tags,
 				employees.id_n, employees.clock_n, employees.salary_n  
 				from mymes.employees as employees left join mymes.employees_t as employees_t on employees.id = employees_t.emp_id 
-				left join mymes.users as usr on usr.id = employees.user_id,
+				left join users as usr on usr.id = employees.user_id,
 				mymes.availability_profiles as ap, mymes.departments as dept
 				where employees.availability_profile_id = ap.id
 				and employees.dept_id = dept.id
@@ -22,7 +22,7 @@ exports.employees = {
 
 			choosers :{
 				departments: `select name from mymes.departments;`,
-				users: `select username as name from mymes.users;`,
+				users: `select username as name from users;`,
 				availability_profiles: `select name from mymes.availability_profiles;`,
 			},
 
@@ -40,7 +40,7 @@ exports.employees = {
 					 value : 'dept_name'
 					},
 				user_id: {
-					query : `select id from mymes.users where username = $1;`,
+					query : `select id from users where username = $1;`,
 					 value : 'user_name'
 					},
 				availability_profile_id: {

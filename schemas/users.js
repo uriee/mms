@@ -7,23 +7,26 @@
 	schema.tables : the tables that need to be updated 
 */
 exports.users = {
+		public: true,		
+
 		sql: {
 			all: `select  users.id as key, users.id, username as name, profile.name as "currentAuthority", users.email, users.title, users.created_at, users.tags
-					from mymes.users as users left join mymes.profiles as profile on users.profile_id = profile.id
+					from users as users left join profiles as profile on users.profile_id = profile.id
 					where 1=1 `,				
 
 			choosers :{
-				profiles: `select name from mymes.profiles;`,
+				profiles: `select name from profiles where active = true;`,
 			},
 		},
 
 		schema: {
+
 			pkey: 'user_id' ,
 
 			fkeys: {
 
 				profile_id: {
-					query : `select id from mymes.profiles where name = $1;`,
+					query : `select id from profiles where name = $1;`,
 					 value : 'currentAuthority'
 					},
 			},
