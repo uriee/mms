@@ -10,9 +10,8 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.mnt_plans = {
 		sql: {
-			all: `select mnt_plan.id, mnt_plan.name, tags, mnt_plan_t.description ,  mnt_plan.reschedule, mnt_plan.repeat ,mnt_plan.start_date, mnt_plan.end_date
-					from mymes.mnt_plans as mnt_plan left join mymes.mnt_plans_t as mnt_plan_t on mnt_plan.id = mnt_plan_t.mnt_plan_id 
-					where mnt_plan_t.lang_id = $1 `,					
+			all: `select mnt_plans.id, mnt_plans.name, tags, mnt_plan_t.description ,  mnt_plans.reschedule, mnt_plans.repeat ,mnt_plans.start_date, mnt_plans.end_date
+					from mymes.mnt_plans as mnt_plans left join mymes.mnt_plans_t as mnt_plan_t on mnt_plans.id = mnt_plan_t.mnt_plan_id where mnt_plan_t.lang_id = $1 `,					
 
 			choosers :{			
 			}

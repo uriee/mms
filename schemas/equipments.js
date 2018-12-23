@@ -11,7 +11,7 @@ const {languagesArray} = require('./schema_conf.js')
 exports.equipments = {
 		sql: {
 			all: `select equipments.id, equipments.name , equipments.active as active, equipments_t.description, dept.name as dept_name, 
-			ap.name as ap_name, equipments.mac_address ,equipments.tags, equipments.serial, equipments.equipment_type
+			ap.name as ap_name, equipments.mac_address ,equipments.tags, equipments.serial, equipments.equipment_type ,equipments.calibrated ,equipments.last_calibration 
 				from mymes.equipments as equipments left join mymes.equipments_t as equipments_t on equipments.id = equipments_t.equipment_id ,
 				mymes.availability_profiles as ap, mymes.departments as dept
 				where equipments.availability_profile_id = ap.id
@@ -81,7 +81,15 @@ exports.equipments = {
 						{
 							"field": "tags",
 							"variable" : "tags"
-						},						
+						},
+						{
+							field: 'calibrated',
+							variable : 'calibrated'
+						},
+						{
+							field: 'last_calibration',
+							variable : 'last_calibration'
+						},												
 						{
 							key: 'id'
 						}

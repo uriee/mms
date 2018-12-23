@@ -78,7 +78,8 @@ exports.parts = {
 							field: 'lang_id',
 							 fkey :'lang_id',
 							  key: 'lang_id'
-							},
+						}
+
 					],
 					fill: {
 						field : 'lang_id',
