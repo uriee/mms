@@ -6,6 +6,7 @@ const {employees} = require('../schemas/employees.js')
 const {parts} = require('../schemas/parts.js')
 const {departments} = require('../schemas/departments.js')
 const {users} = require('../schemas/users.js')
+const {profiles} = require('../schemas/profiles.js')
 const {equipments} = require('../schemas/equipments.js')
 const {resource_groups} = require('../schemas/resource_groups.js')
 const {resources} = require('../schemas/resources.js')
@@ -24,6 +25,7 @@ const schemas = {
 	parts : parts,
 	departments : departments,
 	users : users,
+	profiles : profiles,
 	equipments: equipments,
 	resource_groups : resource_groups,
 	resources : resources,	
@@ -87,8 +89,8 @@ const fetch = async (request, response, entity) => {
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
 		const sql = schemas[entity].sql.all + (zoom === '1' ? zoomSql  : filterSql)  + (schemas[entity].sql.final || '') + ' limit 100;'
+		console.log('ssssqqqqllll:',sql)		
 		const main = await db.any(sql,[lang]).then(x=>x)
-		console.log('ssssqqqqllll:',sql)
 		const type = !main[0] ? 201 : 201
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
 		const chooserQueries = Object.values(schemas[entity].sql.choosers)	
@@ -109,7 +111,7 @@ const fetch = async (request, response, entity) => {
 
 const runQuery = async (query) => {
 	try{
-		return await db.one(query).then(x => x)
+		return await db.any(query).then(x => x)
 	} catch(err) {
 		console.log(err)
 		throw new Error(err)
@@ -152,11 +154,11 @@ const insert = async (req, res, entity) => {
 	var params = req.body
 	console.log('===========1:',params)	
 	Object.keys(params).forEach(x => {
-		params[x] = Array.isArray(params[x]) && params[x].length === 1 ? `{${params[x][0]}}` : params[x]
+		params[x] = Array.isArray(params[x]) ? (params[x].length === 1 ? `{${params[x][0]}}` : `{${params[x]}}`) : params[x]
 	})
 	console.log('===========2:',params)
-
 	const schema = schemas[entity].schema
+	const isPublic = !!schemas[entity].public
 	const post_insert = schemas[entity].post_insert
 	const id  = schema.pkey
 	var new_id = 0
@@ -175,7 +177,7 @@ const insert = async (req, res, entity) => {
 						(Array.isArray(keys[x.fkey]) && keys[x.fkey].length > 1 ? `'{${keys[x.fkey]}}'` : keys[x.fkey]) :
 						`'${params[x.variable]}'`
 					)
-		let sql = `insert into mymes.${tables[0]}(${fields}) values(${values}) returning id;`
+		let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tables[0]}(${fields}) values(${values}) returning id;`
 		console.log("insert query maintable",sql)
 		new_id = keys[id] = await db.one(sql).then(x => x.id)
 		tables.shift()
@@ -187,7 +189,7 @@ const insert = async (req, res, entity) => {
 				return await Promise.all(table.fill.values.map(val => {
 					let values = table.fields.filter(x => x.field )
 											 .map(x =>  x.field === field ? val :x.hasOwnProperty('fkey') ? keys[x.fkey] : `'${params[x.variable+(val === params['lang_id'] ? '_t' : '')]}'`)
-					let sql = `insert into mymes.${tablename}(${fields}) values(${values}) returning *;`
+					let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`
 					console.log("insert query if",sql)
 					return db.one(sql).then(x => x)
 				}))
@@ -195,7 +197,7 @@ const insert = async (req, res, entity) => {
 			}
 			else {
 				let values = table.fields.filter(x => x.field).map(x =>  x.hasOwnProperty('fkey') ? keys[x.fkey] : `'${params[x.variable]}'`)
-				let sql = `insert into mymes.${tablename}(${fields}) values(${values}) returning *;`
+				let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`
 				console.log("insert query else",sql)				
 				let ret =  await db.one(sql).then(x => x)
 				return ret
@@ -219,8 +221,9 @@ const insert = async (req, res, entity) => {
 
 const update = async (req, res, entity) => {
 	let params = req.body
-	console.log("update ---", params)
+	console.log("update ---", )
 	const schema = schemas[entity].schema
+	const isPublic = !!schemas[entity].public
 	const tables= schema.tables
 	const tableNames  = Object.keys(tables)
 	let  fkSchema = {}
@@ -244,14 +247,27 @@ const update = async (req, res, entity) => {
 		const ret = Promise.all(tableNames.filter(tn => tables[tn].fields.some(field => allParams.hasOwnProperty(field.field)))
 				  .map(tn =>{
 				  	const table = schema.tables[tn]
-				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field))
+				  	console.log("---------",allParams)
+				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field) && allParams[field.field])
 				  							 .map(field => ({set : field.field, to: field.array ? allParams[field.field] : allParams[field.field]}))
 					/*console.log('~~~********:',sets)*/
 				  	const wheres = table.fields.filter(field => params.hasOwnProperty(field.key))
 				  							   .map(field => ({where : field.field > '' ? field.field : field.key , equals: params[field.key]}))
 				  	const sqlSet = sets.reduce((old,set) => old + `${set.set} = '${set.to}',`,'').slice(0,-1)
 				  	const sqlWhere = wheres.reduce((old,where) => old + `${where.where} = '${where.equals}' and `,'').slice(0,-5)
-				  	const sql = `update mymes.${tn} set ${sqlSet} where ${sqlWhere} returning 1;`
+				  	//const keyField = table.fields.filter(x => x.key && !x.field)[0].key
+					/*const sql = `UPDATE mymes.${tn}
+								SET  ${sqlSet} 
+								WHERE  ${keyField} = (
+								         SELECT ${keyField}
+								         FROM   mymes.${tn}
+								         WHERE  ${sqlWhere}
+								         LIMIT  1
+								         FOR UPDATE SKIP LOCKED
+								         )
+								RETURNING 1;`				  	
+								*/
+				  	const sql = `update ${!isPublic ? 'mymes.' : ''}${tn} set ${sqlSet} where ${sqlWhere} returning 1;`
 				  	console.log("update sql:",sql)
 				  	const ret  = runQuery(sql)
 				  	return ret
@@ -266,6 +282,39 @@ const update = async (req, res, entity) => {
 }
 
 
+const remove = async (req, res, entity) => {
+	let params = req.body
+	const schema = schemas[entity].schema
+	const isPublic = !!schemas[entity].public	
+	console.log("remove ---",params)	
+	const tables = Object.keys(schema.tables)
+		.map(table => {
+			const key = schema.tables[table].fields.reduce((o,x) => x.hasOwnProperty('key') && x.key === 'id' ? x.field || x.key : o , null)
+			return {
+				'table' : table,
+				'key' : key
+			}
+		})
+		.filter(x => x.key)
+	const sqls = tables.map(table => `delete from ${!isPublic ? 'mymes.' : ''}${table.table} where ${table.key} = `)	
+	const finalSqls	 = params.keys && sqls && params.keys.reduce((o,x) => {
+															sqls.forEach(statement => o.push(statement + x + ' returning 1;'))
+															return o
+															}
+														,[])
+	console.log('final:',finalSqls) 
+
+	try {
+   	const ret  = await Promise.all(finalSqls.map(sql => runQuery(sql)))
+	console.log('remove ret:',ret) 
+		res.status(200).json(ret)
+		return 
+	} catch(err) {
+		console.log(err)
+		res.status(401).json({error:err})
+	}
+}
+
 module.exports = {
-  fetch,fetchTags,fetchByName, update, insert
+  fetch,fetchTags,fetchByName, update, insert, remove
 }

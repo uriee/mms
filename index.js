@@ -1,6 +1,7 @@
 const express = require('express');
 const User = require('./models/User')
-const {fetch,fetchTags, update, insert, fetchByName} = require('./models/Schemas')
+const {fetch, fetchTags, update, insert, remove, fetchByName} = require('./models/Schemas')
+const { bugInsert } = require('./models/utils')
 const app = express();
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -21,38 +22,23 @@ app.use(function(req, res, next) {
     next();
 });
 
-app.post('/mymes/signup', User.signup)
-app.post('/signin', User.signin)
+const entityDict = {
+  'user' : 'users',
+  'profile': 'profiles',
+  'emp': 'employees',
+  'part': 'parts',
+  'dept': 'departments',
+  'equipment': 'equipments',
+  'resourceGroup': 'resource_groups',
+  'resource': 'resources',
+  'availabilityProfile': 'availability_profiles'
+}
+const getEntity = (entity) => entityDict[entity] || entity
+
 app.post('/mymes/signin', User.signin)
-app.post('/mymes/insert/emp', (req,res) => insert(req,res,'employees'))
-app.post('/mymes/update/emp', (req,res) => update(req,res,'employees'))
-app.post('/mymes/insert/part', (req,res) => insert(req,res,'parts'))
-app.post('/mymes/update/part', (req,res) => update(req,res,'parts'))
-app.post('/mymes/insert/dept', (req,res) => insert(req,res,'departments'))
-app.post('/mymes/update/dept', (req,res) => update(req,res,'departments'))
-app.post('/mymes/update/user', (req,res) => update(req,res,'users'))
-app.post('/mymes/update/equipment', (req,res) => update(req,res,'equipments'))
-app.post('/mymes/insert/equipment', (req,res) => insert(req,res,'equipments'))
-app.post('/mymes/update/resourceGroup', (req,res) => update(req,res,'resource_groups'))
-app.post('/mymes/insert/resourceGroup', (req,res) => insert(req,res,'resource_groups'))
-app.post('/mymes/update/resource', (req,res) => update(req,res,'resources'))
-app.post('/mymes/insert/resource', (req,res) => insert(req,res,'resources'))
-app.post('/mymes/update/availabilityProfile', (req,res) => update(req,res,'availability_profiles'))
-app.post('/mymes/insert/availabilityProfile', (req,res) => insert(req,res,'availability_profiles'))
-app.post('/mymes/update/availabilities', (req,res) => update(req,res,'availabilities'))
-app.post('/mymes/insert/availabilities', (req,res) => insert(req,res,'availabilities'))
-app.post('/mymes/update/malfunctions', (req,res) => update(req,res,'malfunctions'))
-app.post('/mymes/insert/malfunctions', (req,res) => insert(req,res,'malfunctions'))
-app.post('/mymes/update/malfunction_types', (req,res) => update(req,res,'malfunction_types'))
-app.post('/mymes/insert/malfunction_types', (req,res) => insert(req,res,'malfunction_types'))
-app.post('/mymes/update/repairs', (req,res) => update(req,res,'repairs'))
-app.post('/mymes/insert/repairs', (req,res) => insert(req,res,'repairs'))
-app.post('/mymes/update/repair_types', (req,res) => update(req,res,'repair_types'))
-app.post('/mymes/insert/repair_types', (req,res) => insert(req,res,'repair_types'))
-app.post('/mymes/insert/mnt_plans', (req,res) => insert(req,res,'mnt_plans'))
-app.post('/mymes/update/mnt_plans', (req,res) => update(req,res,'mnt_plans'))
-app.post('/mymes/insert/mnt_plan_items', (req,res) => insert(req,res,'mnt_plan_items'))
-app.post('/mymes/update/mnt_plan_items', (req,res) => update(req,res,'mnt_plan_items'))
+app.post('/mymes/remove', (req,res) => remove(req,res,getEntity(req.body.entity)))
+app.post('/mymes/update', (req,res) => update(req,res,getEntity(req.body.entity)))
+app.post('/mymes/insert', (req,res) => insert(req,res,getEntity(req.body.entity)))
 
 router.get('/t', function(req, res) {
     res.json({
@@ -61,6 +47,7 @@ router.get('/t', function(req, res) {
 });
 
 router.get('/user', (req,res) => fetch(req, res, 'users'))
+router.get('/profile', (req,res) => fetch(req, res, 'profiles'))
 router.get('/emp', (req,res) => fetch(req, res, 'employees'))
 router.get('/part', (req,res) => fetch(req, res, 'parts'))
 router.get('/dept', (req,res) => fetch(req, res, 'departments'))
@@ -76,6 +63,8 @@ router.get('/repair_types', (req,res) => fetch(req, res, 'repair_types'))
 router.get('/mnt_plans', (req,res) => fetch(req, res, 'mnt_plans'))
 router.get('/mnt_plan_items', (req,res) => fetch(req, res, 'mnt_plan_items'))
 router.get('/tags', (req,res) => fetchTags(req, res, 'tags'))
+
+app.post('/mymes/bug', (req,res) => bugInsert(req,res))
 
 app.post('/secure', async (request, response) => {
   const userReq = request.body
