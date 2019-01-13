@@ -4,6 +4,14 @@ const {flatten} = require('lodash')
 
 const {employees} = require('../schemas/employees.js')
 const {parts} = require('../schemas/parts.js')
+const {serials} = require('../schemas/serials.js') 
+const {serial_statuses} = require('../schemas/serial_statuses.js') 
+const {actions} = require('../schemas/actions.js') 
+const {process} = require('../schemas/process.js') 
+const {locations} = require('../schemas/locations.js') 
+//const {kit} = require('../schemas/kit.js') 
+const {proc_act} = require('../schemas/proc_act.js') 
+
 const {departments} = require('../schemas/departments.js')
 const {users} = require('../schemas/users.js')
 const {profiles} = require('../schemas/profiles.js')
@@ -37,6 +45,16 @@ const schemas = {
 	repair_types : repair_types,
 	mnt_plans : mnt_plans,
 	mnt_plan_items : mnt_plan_items,
+	serials : serials, 
+	serial_statuses : serial_statuses,
+	actions : actions,
+	process : process,
+	proc_act: proc_act,
+	/*
+	kit : kit,
+	*/
+	locations : locations
+
 	}
 
 const fillTemplate = function(templateString, templateVars){
@@ -61,6 +79,17 @@ const fetchTags = async(request, response) =>{
 	const sql = `select * from mymes.tagable
 					where exists
 					(select * from (select unnest(mymes.tagable.tags)) x(tag) where x.tag like '%${request.query.tags}%');`
+
+	try{
+		const ret =  await db.any(sql).then(x=>x)	
+		response.status(201).json({main:ret})
+	}catch(e){
+		console.log(e)
+	}
+}
+
+const fetchRoutes = async(request, response) =>{
+	const sql = `select routes from routes`
 
 	try{
 		const ret =  await db.any(sql).then(x=>x)	
@@ -152,11 +181,9 @@ const getFkeys = async (fkeys,params) => {
 
 const insert = async (req, res, entity) => {
 	var params = req.body
-	console.log('===========1:',params)	
 	Object.keys(params).forEach(x => {
 		params[x] = Array.isArray(params[x]) ? (params[x].length === 1 ? `{${params[x][0]}}` : `{${params[x]}}`) : params[x]
 	})
-	console.log('===========2:',params)
 	const schema = schemas[entity].schema
 	const isPublic = !!schemas[entity].public
 	const post_insert = schemas[entity].post_insert
@@ -164,7 +191,7 @@ const insert = async (req, res, entity) => {
 	var new_id = 0
 	try{
 		const keys = await getFkeys(schema.fkeys,params)
-
+	console.log('===========3:',keys)
 		const tables = Object.keys(schema.tables)
 		const maintable = schema.tables[tables[0]]
 		const insertFields = maintable.fields.filter(x => x.field && (x.value || keys[x.fkey]>'' ||params[x.variable]>''))
@@ -214,8 +241,8 @@ const insert = async (req, res, entity) => {
 
 		res.status(200).json(ret)
 	} catch(err) {
-		console.log(err)
-		res.status(401)
+		console.log("123:",err)
+		res.status(406).json({error: err})
 	}
 }
 
@@ -248,7 +275,7 @@ const update = async (req, res, entity) => {
 				  .map(tn =>{
 				  	const table = schema.tables[tn]
 				  	console.log("---------",allParams)
-				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field) && allParams[field.field])
+				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field) && (allParams[field.field] || allParams[field.field] === false))
 				  							 .map(field => ({set : field.field, to: field.array ? allParams[field.field] : allParams[field.field]}))
 					/*console.log('~~~********:',sets)*/
 				  	const wheres = table.fields.filter(field => params.hasOwnProperty(field.key))
@@ -277,7 +304,7 @@ const update = async (req, res, entity) => {
 		return
 	} catch(err) {
 		console.log(err)
-		res.status(401).json({error:err})
+		res.status(406).json({error:err})
 	}
 }
 
@@ -311,10 +338,10 @@ const remove = async (req, res, entity) => {
 		return 
 	} catch(err) {
 		console.log(err)
-		res.status(401).json({error:err})
+		res.status(402).json({error:err})
 	}
 }
 
 module.exports = {
-  fetch,fetchTags,fetchByName, update, insert, remove
+  fetch, fetchRoutes, fetchTags,fetchByName, update, insert, remove, runQuery
 }
