@@ -14,6 +14,7 @@ exports.locations = {
 					from mymes.locations as locations ,mymes.serials as serials, mymes.actions as actions
 					where serials.id = locations.serial_id
 					and actions.id = locations.act_id 
+					and serials.name = $2 
 					`,					
 
 			choosers :{	

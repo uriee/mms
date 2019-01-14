@@ -11,6 +11,7 @@ const {process} = require('../schemas/process.js')
 const {locations} = require('../schemas/locations.js') 
 //const {kit} = require('../schemas/kit.js') 
 const {proc_act} = require('../schemas/proc_act.js') 
+const {serial_act} = require('../schemas/serial_act.js') 
 
 const {departments} = require('../schemas/departments.js')
 const {users} = require('../schemas/users.js')
@@ -50,6 +51,7 @@ const schemas = {
 	actions : actions,
 	process : process,
 	proc_act: proc_act,
+	serial_act: serial_act,	
 	/*
 	kit : kit,
 	*/
@@ -94,7 +96,6 @@ const fetchRoutes = async(request, response) =>{
 	try{
 		const ret =  await db.any(sql).then(x=>x)	
 		response.status(201).json({main:ret})
-	console.log('xxxxxx',sql,request.query,ret)		
 	}catch(e){
 		console.log(e)
 	}
@@ -103,8 +104,8 @@ const fetchRoutes = async(request, response) =>{
 Populate the response data from DB with the requested data of a certain entity
 */
 const fetch = async (request, response, entity) => {
-	const {lang,pageSize,currentPage,zoom} = request.query
-	console.log(schemas[entity],entity)
+	const {lang,pageSize,currentPage,zoom,name} = request.query
+	console.log('_ _ _ _ _ _ _ _ ',name,lang , request.query)
 	const tables = schemas[entity].schema.tables	
 	const filters = flatten(	
 							Object.keys(tables)
@@ -118,8 +119,8 @@ const fetch = async (request, response, entity) => {
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
 		const sql = schemas[entity].sql.all + (zoom === '1' ? zoomSql  : filterSql)  + (schemas[entity].sql.final || '') + ' limit 100;'
-		console.log('ssssqqqqllll:',sql)		
-		const main = await db.any(sql,[lang]).then(x=>x)
+		console.log("- - - -:",sql,)	
+		const main = await db.any(sql,[lang,name]).then(x=>x)
 		const type = !main[0] ? 201 : 201
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
 		const chooserQueries = Object.values(schemas[entity].sql.choosers)	
@@ -157,10 +158,8 @@ const getFkeys = async (fkeys,params) => {
 			const parameter = Array.isArray(params[query.value]) ? params[query.value].toString() :
 								[params[query.value]]
 			var res = query.hasOwnProperty('query') ?
-						 await db.any(query.query, parameter)
-					  	 .then(x => {console.log("----------------------",x,key,fkeys[key]);
-					  	  return Array.isArray(x)? x.map(x=> x.id) : x.id}) :
-					  params[query.value]
+						await db.any(query.query, parameter).then(x => Array.isArray(x)? x.map(x=> x.id) : x.id) :
+					    params[query.value]
 	
 			return res
 		})).then(x => x)
@@ -186,7 +185,6 @@ const insert = async (req, res, entity) => {
 	})
 	const schema = schemas[entity].schema
 	const isPublic = !!schemas[entity].public
-	const post_insert = schemas[entity].post_insert
 	const id  = schema.pkey
 	var new_id = 0
 	try{
@@ -230,8 +228,12 @@ const insert = async (req, res, entity) => {
 				return ret
 			}
 		}))
-
-		const post = post_insert && db.func(post_insert.function, new_id)
+						// Execeute the Post-Insert Statement from the schema
+		const post_insert = schemas[entity].post_insert						
+		params.id = new_id
+		console.log('params:',params)
+		const parameters = post_insert && post_insert.parameters.map(x => params[x])
+		const post = post_insert && parameters && db.func(post_insert.function, parameters)
 											    .then(data => {
 											        console.log(`Return from function - ${post_insert.function} : ${data}`); 
 											    })
@@ -300,6 +302,18 @@ const update = async (req, res, entity) => {
 				  	return ret
 		}))
 
+						// Execeute the Post-Insert Statement from the schema
+		const post_update = schemas[entity].post_update
+		console.log('params:',params)
+		const parameters = post_update && post_update.parameters.map(x => params[x])
+		const post = post_update && parameters && db.func(post_update.function, parameters)
+											    .then(data => {
+											        console.log(`Return from function - ${post_update.function} : ${data}`); 
+											    })
+											    .catch(error => {
+											        console.log('ERROR:', error); 
+											    });
+
 		res.status(200).json(ret)
 		return
 	} catch(err) {
@@ -313,7 +327,6 @@ const remove = async (req, res, entity) => {
 	let params = req.body
 	const schema = schemas[entity].schema
 	const isPublic = !!schemas[entity].public	
-	console.log("remove ---",params)	
 	const tables = Object.keys(schema.tables)
 		.map(table => {
 			const key = schema.tables[table].fields.reduce((o,x) => x.hasOwnProperty('key') && x.key === 'id' ? x.field || x.key : o , null)
@@ -329,16 +342,14 @@ const remove = async (req, res, entity) => {
 															return o
 															}
 														,[])
-	console.log('final:',finalSqls) 
 
 	try {
    	const ret  = await Promise.all(finalSqls.map(sql => runQuery(sql)))
-	console.log('remove ret:',ret) 
 		res.status(200).json(ret)
 		return 
 	} catch(err) {
 		console.log(err)
-		res.status(402).json({error:err})
+		res.status(406).json({error:err})
 	}
 }
 

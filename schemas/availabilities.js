@@ -12,7 +12,7 @@ exports.availabilities = {
 		sql: {
 			all: `select availabilities.id,availabilities.availability_profile_id, availability_profiles.name , weekday , from_time , to_time
 			    from mymes.availability_profiles as availability_profiles , mymes.availabilities as availabilities
-				where availability_profile_id = availability_profiles.id `,
+				where availability_profile_id = availability_profiles.id and availability_profiles.name = $2 `,
 
 			final: ' order by 3,4 ',				
 

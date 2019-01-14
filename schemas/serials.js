@@ -12,8 +12,8 @@ exports.serials = {
 		sql: {
 			all: `select serials.id, serials.name, serials.tags, serials_t.description, serials.active, serials.end_date, 
 					part.name as partname, process.name as procname, serial_statuses.name as status 
-					from mymes.serials as serials left join mymes.serials_t as serials_t on serials.id = serials_t.serial_id,
-					mymes.serials as serials2 left join mymes.process as process on serials2.process_id = process.id,
+					from mymes.serials as serials left join mymes.serials_t as serials_t on serials.id = serials_t.serial_id 
+					left join mymes.process as process on serials.process_id = process.id,
 					mymes.serial_statuses as serial_statuses, mymes.part as part 
 					where part.id = serials.part_id
 					and serial_statuses.id = serials.status
@@ -26,6 +26,8 @@ exports.serials = {
 			}
 
 		},
+
+
 
 		schema: {
 			pkey: 'serial_id' ,
