@@ -38,7 +38,8 @@ const entityDict = {
   'locations' : 'locations',
   'kit' : 'kit',
   'process' : 'process',
-  'proc_act' : 'proc_act'
+  'proc_act' : 'proc_act',
+  'serial_act' : 'serial_act'  
 }
 const getEntity = (entity) => entityDict[entity] || entity
 
@@ -79,6 +80,7 @@ router.get('/locations', (req,res) => fetch(req, res, 'locations'))
 router.get('/kit', (req,res) => fetch(req, res, 'kit'))
 router.get('/process', (req,res) => fetch(req, res, 'process'))
 router.get('/proc_act', (req,res) => fetch(req, res, 'proc_act'))
+router.get('/serial_act', (req,res) => fetch(req, res, 'serial_act'))
 router.get('/tags', (req,res) => fetchTags(req, res, 'tags'))
 router.get('/routes', (req,res) => fetchRoutes(req, res))
 
