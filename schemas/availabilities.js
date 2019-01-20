@@ -22,11 +22,12 @@ exports.availabilities = {
 		},
 
 		schema: {
-			pkey: 'availability_profiles_id' ,
+			pkey: 'availability_profile_id' ,
 
 			fkeys: {
-				availability_profiles_id : {
-					value : 'availability_profiles_id'
+				availability_profile_id : {
+					query : `select id from mymes.availability_profiles where name = $1;`,
+					value : 'name'
 				},
 				
 			},
@@ -35,8 +36,8 @@ exports.availabilities = {
 				availabilities :{
 					fields : [
 						{
-							field: 'availability_profiles_id',
-							fkey: 'availability_profiles_id'
+							field: 'availability_profile_id',
+							fkey: 'availability_profile_id'
 						},
 					
 						{
@@ -45,11 +46,13 @@ exports.availabilities = {
 						},
 						{
 							field: 'from_time',
-							variable : 'from_time'
+							variable : 'from_time',
+							conv: '::timestamp::time without time zone'
 						},						
 						{
 							field: 'to_time',
-							variable : 'to_time'
+							variable : 'to_time',
+							conv : '::timestamp::time'
 						},
 						{
 							key: 'id'

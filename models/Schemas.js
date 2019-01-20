@@ -9,7 +9,9 @@ const {serial_statuses} = require('../schemas/serial_statuses.js')
 const {actions} = require('../schemas/actions.js') 
 const {process} = require('../schemas/process.js') 
 const {locations} = require('../schemas/locations.js') 
-//const {kit} = require('../schemas/kit.js') 
+const {bom_locations} = require('../schemas/bom_locations.js')
+const {kit} = require('../schemas/kit.js') 
+const {bom} = require('../schemas/bom.js') 
 const {proc_act} = require('../schemas/proc_act.js') 
 const {serial_act} = require('../schemas/serial_act.js') 
 
@@ -52,12 +54,11 @@ const schemas = {
 	process : process,
 	proc_act: proc_act,
 	serial_act: serial_act,	
-	/*
 	kit : kit,
-	*/
-	locations : locations
-
-	}
+	bom : bom,
+	locations : locations,
+	bom_locations : bom_locations	
+}
 
 const fillTemplate = function(templateString, templateVars){
 	
@@ -105,7 +106,6 @@ Populate the response data from DB with the requested data of a certain entity
 */
 const fetch = async (request, response, entity) => {
 	const {lang,pageSize,currentPage,zoom,name} = request.query
-	console.log('_ _ _ _ _ _ _ _ ',name,lang , request.query)
 	const tables = schemas[entity].schema.tables	
 	const filters = flatten(	
 							Object.keys(tables)
@@ -119,7 +119,6 @@ const fetch = async (request, response, entity) => {
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
 		const sql = schemas[entity].sql.all + (zoom === '1' ? zoomSql  : filterSql)  + (schemas[entity].sql.final || '') + ' limit 100;'
-		console.log("- - - -:",sql,)	
 		const main = await db.any(sql,[lang,name]).then(x=>x)
 		const type = !main[0] ? 201 : 201
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
@@ -200,7 +199,7 @@ const insert = async (req, res, entity) => {
 						`'${x.value}'` :
 						x.hasOwnProperty('fkey') ?
 						(Array.isArray(keys[x.fkey]) && keys[x.fkey].length > 1 ? `'{${keys[x.fkey]}}'` : keys[x.fkey]) :
-						`'${params[x.variable]}'`
+						`'${params[x.variable]}'${x.conv ? x.conv: ''}`
 					)
 		let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tables[0]}(${fields}) values(${values}) returning id;`
 		console.log("insert query maintable",sql)
@@ -327,7 +326,7 @@ const remove = async (req, res, entity) => {
 	let params = req.body
 	const schema = schemas[entity].schema
 	const isPublic = !!schemas[entity].public	
-	const tables = Object.keys(schema.tables)
+	let tables = Object.keys(schema.tables)
 		.map(table => {
 			const key = schema.tables[table].fields.reduce((o,x) => x.hasOwnProperty('key') && x.key === 'id' ? x.field || x.key : o , null)
 			return {
@@ -336,6 +335,8 @@ const remove = async (req, res, entity) => {
 			}
 		})
 		.filter(x => x.key)
+	const post_delete = schemas[entity].post_delete
+	tables = post_delete && post_delete.tables ? [...tables, ...post_delete.tables] : tables
 	const sqls = tables.map(table => `delete from ${!isPublic ? 'mymes.' : ''}${table.table} where ${table.key} = `)	
 	const finalSqls	 = params.keys && sqls && params.keys.reduce((o,x) => {
 															sqls.forEach(statement => o.push(statement + x + ' returning 1;'))

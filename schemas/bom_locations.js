@@ -8,14 +8,15 @@ const {languagesArray} = require('./schema_conf.js')
 	schema.fkeys : keys that need to be fetched from server in order to preform insert/update
 	schema.tables : the tables that need to be updated 
 */
-exports.locations = {
+exports.bom_locations = {
 		sql: {
-			all: `select locations.id, serials.name, locations.partname,  locations.quant, locations.location, actions.name as act_name,
+			all: `select locations.id, part.name, locations.partname,  locations.quant, locations.location, actions.name as act_name,
 					locations.x, locations.y, locations.z ,locations.is_serial 
-					from mymes.locations as locations ,mymes.serials as serials, mymes.actions as actions
-					where serials.id = locations.serial_id
+					from mymes.locations as locations ,mymes.part as part, mymes.actions as actions
+					where part.id = locations.serial_id
 					and actions.id = locations.act_id 
-					and serials.name = $2 
+					and is_serial is null
+					and part.name = $2 
 					`,					
 
 			choosers :{	
@@ -33,7 +34,7 @@ exports.locations = {
 					 value : 'act_name'
 				},
 				serial_id: {
-					query : `select id from mymes.serials where name = $1;`,
+					query : `select id from mymes.part where name = $1;`,
 					 value : 'name'
 				}
 			},
@@ -75,7 +76,8 @@ exports.locations = {
 						},
 						{
 							field: 'is_serial',
-							value: true
+							variable: 'is_serial',
+							value: false
 						},						
 						{
 							key: 'id'
