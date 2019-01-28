@@ -10,12 +10,12 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.locations = {
 		sql: {
-			all: `select locations.id, serials.name, locations.partname,  locations.quant, locations.location, actions.name as act_name,
-					locations.x, locations.y, locations.z ,locations.is_serial 
-					from mymes.locations as locations ,mymes.serials as serials, mymes.actions as actions
-					where serials.id = locations.serial_id
+			all: `select locations.id, part.name, part.id as parent, locations.partname,  locations.quant, locations.location, actions.name as act_name,
+					locations.x, locations.y, locations.z 
+					from mymes.locations as locations ,mymes.part as part, mymes.actions as actions
+					where part.id = locations.part_id
 					and actions.id = locations.act_id 
-					and serials.name = $2 
+					and part.id = $3 
 					`,					
 
 			choosers :{	
@@ -25,16 +25,15 @@ exports.locations = {
 		},
 
 		schema: {
-			pkey: 'serial_id' ,
+			pkey: 'part_id' ,
 
 			fkeys: {			
 				act_id: {
 					query : `select id from mymes.actions where name = $1;`,
-					 value : 'act_name'
+					value : 'act_name'
 				},
-				serial_id: {
-					query : `select id from mymes.serials where name = $1;`,
-					 value : 'name'
+				part_id: {
+					value : 'parent'
 				}
 			},
 
@@ -42,8 +41,8 @@ exports.locations = {
 				locations :{
 					fields : [
 						{
-							field: 'serial_id',
-							fkey : 'serial_id'
+							field: 'part_id',
+							fkey : 'part_id'
 						},					
 						{
 							field: 'partname',
@@ -72,10 +71,6 @@ exports.locations = {
 						{				
 							field: 'z',
 							variable : 'z'
-						},
-						{
-							field: 'is_serial',
-							value: true
 						},						
 						{
 							key: 'id'

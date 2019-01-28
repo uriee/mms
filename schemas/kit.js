@@ -13,7 +13,7 @@ exports.kit = {
 			all: `select kit.id, serials.name, kit.partname,  kit.quant, kit.balance, kit.lot 
 					from mymes.kit as kit ,mymes.serials as serials 
 					where serials.id = kit.serial_id
-					and serials.name = $2 
+					and serials.id = $3 
 					`,					
 
 			choosers :{	
@@ -28,8 +28,7 @@ exports.kit = {
 			fkeys: {			
 
 				serial_id: {
-					query : `select id from mymes.serials where name = $1;`,
-					 value : 'name'
+					value : 'parent'
 				}
 			},
 

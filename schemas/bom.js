@@ -13,7 +13,7 @@ exports.bom = {
 			all: `select bom.id, part.name, bom.partname, bom.coef 
 					from mymes.bom as bom ,mymes.part as part 
 					where part.id = bom.parent_id
-					and part.name = $2 
+					and part.id = $3 
 					`,					
 
 			choosers :{	
@@ -28,8 +28,8 @@ exports.bom = {
 			fkeys: {			
 
 				parent_id: {
-					query : `select id from mymes.part where name = $1;`,
-					 value : 'name'
+					//query : `select id from mymes.part where name = $1;`,
+					 value : 'parent'
 				}
 			},
 

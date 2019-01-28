@@ -12,7 +12,7 @@ exports.mnt_plan_items = {
 			all: `select mnt_plan_items.id, mnt_plans.name as name, resources.name as resource_name
 			    from mymes.mnt_plan_items as mnt_plan_items, mymes.mnt_plans as mnt_plans, mymes.resources as resources 
 				where mnt_plan_items.mnt_plan_id = mnt_plans.id 
-				and mnt_plan_items.resource_id = resources.id and mnt_plans.name = $2 `,
+				and mnt_plan_items.resource_id = resources.id and mnt_plans.id = $2 `,
 			final: ' order by 2,3 ',				
 
 			choosers :{
@@ -31,7 +31,7 @@ exports.mnt_plan_items = {
 					},
 				mnt_plan_id: {
 					query : `select id from mymes.mnt_plans where name = $1;`,
-					 value : 'name'
+					 value : 'parent'
 					},				
 			},
 

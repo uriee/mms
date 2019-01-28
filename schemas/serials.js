@@ -10,8 +10,8 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.serials = {
 		sql: {
-			all: `select serials.id, serials.name, serials.tags, serials_t.description, serials.active, serials.end_date, 
-					part.name as partname, process.name as procname, serial_statuses.name as status 
+			all: `select serials.id, serials.name, serials.quant, serials.tags, serials_t.description, serials.active, serials.end_date, 
+					concat(part.name,':',part.revision) as partname, process.name as procname, serial_statuses.name as status 
 					from mymes.serials as serials left join mymes.serials_t as serials_t on serials.id = serials_t.serial_id 
 					left join mymes.process as process on serials.process_id = process.id,
 					mymes.serial_statuses as serial_statuses, mymes.part as part 
@@ -21,7 +21,7 @@ exports.serials = {
 
 			choosers :{	
 				status: `select name from mymes.serial_statuses;`,
-				part: `select name from mymes.part;`,
+				part: `select concat(name,':',revision) as name from mymes.part where active=true order by name,revision;`,
 				process: `select name from mymes.process;`
 			}
 
@@ -55,7 +55,7 @@ exports.serials = {
 					 value : 'status'
 				},
 				part_id: {
-					query : `select id from mymes.part where name = $1;`,
+					query : `select id from mymes.part where name = split_part($1,':',1) and revision = split_part($1,':',2);`,
 					 value : 'partname'
 				},
 				process_id: {
@@ -75,6 +75,10 @@ exports.serials = {
 							field: 'active',
 							variable : 'active'
 						},
+						{
+							field: 'quant',
+							variable : 'quant'
+						},						
 						{
 							field: 'part_id',
 							fkey : 'part_id'

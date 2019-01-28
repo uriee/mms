@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.parts = {
 		sql: {
-			all: `select part.id, part.name, part.revision, part_t.description , part_status.name as part_status, part.type, part.tags
+			all: `select part.id, part.name, part.revision, part.active, part_t.description , part_status.name as part_status, part.tags
 					from mymes.part as part left join mymes.part_t as part_t on part.id = part_t.part_id, 
 					mymes.part_status 
 					where part_status.id = part.part_status_id 
@@ -35,7 +35,7 @@ exports.parts = {
 					value : 'lang_id'
 				},
 				part_status_id: {
-					query : `select id from mymes.part_status where name = $1;`,
+					query : `select id from mymes.part_status where name = $1 ; `,
 					 value : 'part_status'
 					}
 			},
@@ -48,9 +48,9 @@ exports.parts = {
 							 fkey : 'part_status_id'
 						},
 						{
-							field: 'type',
-							variable : 'type'
-						},
+							field: 'active',
+							variable : 'active'
+						},						
 						{
 							field: 'name',
 							variable : 'name'
@@ -97,7 +97,13 @@ exports.parts = {
 				}
 			},
 
-			functions : [{name: 'Clone Part', parameteres: ['id'], function : 'clone_part'}]
+			functions : [
+				{
+					name: 'Clone Part',
+					parameteres: ['id'],
+					function : 'clone_part'
+				}
+			]
 		}	
 	}
 

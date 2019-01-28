@@ -14,7 +14,7 @@ exports.proc_act = {
 					from mymes.proc_act as proc_act ,mymes.process as process, mymes.actions as actions
 					where process.id = proc_act.process_id
 					and actions.id = proc_act.act_id 
-					and process.name = $2 
+					and process.id = $3 
 					`,
 			'final' : ' order by pos ',
 
@@ -34,8 +34,7 @@ exports.proc_act = {
 					 value : 'act_name'
 				},
 				process_id: {
-					query : `select id from mymes.process where name = $1;`,
-					 value : 'name'
+					value : 'parent'
 				}
 			},
 

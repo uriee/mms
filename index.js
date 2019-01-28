@@ -1,6 +1,6 @@
 const express = require('express');
 const User = require('./models/User')
-const {fetch, fetchTags, update, insert, remove, fetchByName, fetchRoutes, runQuery} = require('./models/Schemas')
+const {fetch, fetchTags, update, insert, remove, fetchByName, fetchRoutes, runQuery, func} = require('./models/Schemas')
 const { bugInsert } = require('./models/utils')
 const app = express();
 const bodyParser = require('body-parser');
@@ -39,7 +39,8 @@ const entityDict = {
   'kit' : 'kit',
   'process' : 'process',
   'proc_act' : 'proc_act',
-  'serial_act' : 'serial_act'  
+  'serial_act' : 'serial_act',
+  'work_report' : 'work_report' 
 }
 const getEntity = (entity) => entityDict[entity] || entity
 
@@ -47,6 +48,8 @@ app.post('/mymes/signin', User.signin)
 app.post('/mymes/remove', (req,res) => remove(req,res,getEntity(req.body.entity)))
 app.post('/mymes/update', (req,res) => update(req,res,getEntity(req.body.entity)))
 app.post('/mymes/insert', (req,res) => insert(req,res,getEntity(req.body.entity)))
+app.post('/mymes/func', (req,res) => func(req,res,getEntity(req.body.entity)))
+
 app.post('/mymes/updateroutes', (req,res) => {
      res.status(201).json({main:2})
    runQuery(`update routes set routes = '${req.body.routes}'`)
@@ -75,9 +78,9 @@ router.get('/mnt_plans', (req,res) => fetch(req, res, 'mnt_plans'))
 router.get('/mnt_plan_items', (req,res) => fetch(req, res, 'mnt_plan_items'))
 router.get('/serials', (req,res) => fetch(req, res, 'serials'))
 router.get('/serial_statuses', (req,res) => fetch(req, res, 'serial_statuses'))
+router.get('/work_report', (req,res) => fetch(req, res, 'work_report'))
 router.get('/actions', (req,res) => fetch(req, res, 'actions'))
 router.get('/locations', (req,res) => fetch(req, res, 'locations'))
-router.get('/bom_locations', (req,res) => fetch(req, res, 'bom_locations'))
 router.get('/bom', (req,res) => fetch(req, res, 'bom'))
 router.get('/kit', (req,res) => fetch(req, res, 'kit'))
 router.get('/process', (req,res) => fetch(req, res, 'process'))

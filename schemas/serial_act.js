@@ -10,11 +10,11 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.serial_act = {
 		sql: {
-			all: `select serial_act.id, serial.name, serial_act.pos, actions.name as act_name
+			all: `select serial_act.id, serial.name, serial_act.pos,serial_act.quant, serial_act.balance,  actions.name as act_name
 					from mymes.serial_act as serial_act ,mymes.serials as serial, mymes.actions as actions
 					where serial.id = serial_act.serial_id
 					and actions.id = serial_act.act_id 
-					and serial.name = $2 
+					and serial.id = $3 
 					`,
 			'final' : ' order by pos ',
 
@@ -34,8 +34,7 @@ exports.serial_act = {
 					 value : 'act_name'
 				},
 				serial_id: {
-					query : `select id from mymes.serials where name = $1;`,
-					 value : 'name'
+					value : 'parent'
 				}
 			},
 
@@ -49,7 +48,15 @@ exports.serial_act = {
 						{
 							field: 'pos',
 							variable : 'pos'
-						},					
+						},
+						{
+							field: 'quant',
+							variable : 'quant'
+						},
+						{
+							field: 'balance',
+							variable : 'balance'
+						},						
 						{
 							field: 'act_id',
 							fkey : 'act_id'
