@@ -7,9 +7,9 @@ const {parts} = require('../schemas/parts.js')
 const {serials} = require('../schemas/serials.js') 
 const {serial_statuses} = require('../schemas/serial_statuses.js') 
 const {actions} = require('../schemas/actions.js') 
+const {work_report} = require('../schemas/work_report.js') 
 const {process} = require('../schemas/process.js') 
 const {locations} = require('../schemas/locations.js') 
-const {bom_locations} = require('../schemas/bom_locations.js')
 const {kit} = require('../schemas/kit.js') 
 const {bom} = require('../schemas/bom.js') 
 const {proc_act} = require('../schemas/proc_act.js') 
@@ -57,7 +57,7 @@ const schemas = {
 	kit : kit,
 	bom : bom,
 	locations : locations,
-	bom_locations : bom_locations	
+	work_report : work_report,
 }
 
 const fillTemplate = function(templateString, templateVars){
@@ -105,7 +105,7 @@ const fetchRoutes = async(request, response) =>{
 Populate the response data from DB with the requested data of a certain entity
 */
 const fetch = async (request, response, entity) => {
-	const {lang,pageSize,currentPage,zoom,name} = request.query
+	const {lang,pageSize,currentPage,zoom,name,parent} = request.query
 	const tables = schemas[entity].schema.tables	
 	const filters = flatten(	
 							Object.keys(tables)
@@ -119,7 +119,7 @@ const fetch = async (request, response, entity) => {
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
 		const sql = schemas[entity].sql.all + (zoom === '1' ? zoomSql  : filterSql)  + (schemas[entity].sql.final || '') + ' limit 100;'
-		const main = await db.any(sql,[lang,name]).then(x=>x)
+		const main = await db.any(sql,[lang,name,parent]).then(x=>x)
 		const type = !main[0] ? 201 : 201
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
 		const chooserQueries = Object.values(schemas[entity].sql.choosers)	
@@ -154,10 +154,15 @@ const getFkeys = async (fkeys,params) => {
 		const keyValues = await Promise.all(fkeysNames.map(async (key) => {
 			const query = fkeys[key]
 	
-			const parameter = Array.isArray(params[query.value]) ? params[query.value].toString() :
-								[params[query.value]]
+			/*const parameter = Array.isArray(params[query.value]) ? params[query.value].toString() :
+								[params[query.value]]*/
+			const parameters = Array.isArray(query.value) ? 
+				query.value.map(value =>  Array.isArray(params[value]) ? params[value].toString() :	params[value]) :
+				Array.isArray(params[query.value]) ? params[query.value].toString() :[params[query.value]]
+
+			console.log("***",query.query, parameters)
 			var res = query.hasOwnProperty('query') ?
-						await db.any(query.query, parameter).then(x => Array.isArray(x)? x.map(x=> x.id) : x.id) :
+						await db.any(query.query, parameters).then(x => Array.isArray(x)? x.map(x=> x.id) : x.id) :
 					    params[query.value]
 	
 			return res
@@ -179,6 +184,7 @@ const getFkeys = async (fkeys,params) => {
 
 const insert = async (req, res, entity) => {
 	var params = req.body
+	console.log("___---__-:",params)
 	Object.keys(params).forEach(x => {
 		params[x] = Array.isArray(params[x]) ? (params[x].length === 1 ? `{${params[x][0]}}` : `{${params[x]}}`) : params[x]
 	})
@@ -186,6 +192,20 @@ const insert = async (req, res, entity) => {
 	const isPublic = !!schemas[entity].public
 	const id  = schema.pkey
 	var new_id = 0
+	const pre_insert = schemas[entity].pre_insert	
+
+	try{						
+		const parameters = pre_insert && pre_insert.parameters.map(x => params[x])
+		const pre = pre_insert && parameters && await db.func(pre_insert.function, parameters)
+											    .then(data => {
+											        console.log(`Return from function - ${pre_insert.function} : ${data}`); 
+											    })									    
+		}catch(err) {
+			console.log("pre_insert:",err)
+			res.status(406).json({error: 'pre_insetr : '+err})
+			return 0
+		}
+		
 	try{
 		const keys = await getFkeys(schema.fkeys,params)
 	console.log('===========3:',keys)
@@ -249,7 +269,6 @@ const insert = async (req, res, entity) => {
 
 const update = async (req, res, entity) => {
 	let params = req.body
-	console.log("update ---", )
 	const schema = schemas[entity].schema
 	const isPublic = !!schemas[entity].public
 	const tables= schema.tables
@@ -335,8 +354,8 @@ const remove = async (req, res, entity) => {
 			}
 		})
 		.filter(x => x.key)
-	const post_delete = schemas[entity].post_delete
-	tables = post_delete && post_delete.tables ? [...tables, ...post_delete.tables] : tables
+	const pre_delete = schemas[entity].pre_delete
+	tables = pre_delete && pre_delete.tables ? [...tables, ...pre_delete.tables] : tables
 	const sqls = tables.map(table => `delete from ${!isPublic ? 'mymes.' : ''}${table.table} where ${table.key} = `)	
 	const finalSqls	 = params.keys && sqls && params.keys.reduce((o,x) => {
 															sqls.forEach(statement => o.push(statement + x + ' returning 1;'))
@@ -345,15 +364,36 @@ const remove = async (req, res, entity) => {
 														,[])
 
 	try {
+   	console.log("Param:",params)
+	const post = pre_delete && params.keys && await db.func(pre_delete.function, [params.keys])
+											    .then(data => {
+											        console.log(`Return from function - ${pre_delete.function} : ${data[0]}`); 
+											    })	
    	const ret  = await Promise.all(finalSqls.map(sql => runQuery(sql)))
+
+	res.status(200).json(ret)
+		return 
+	} catch(err) {
+		console.log("delete:",err)
+		res.status(406).json({error:'delete : '+err})
+	}
+}
+
+const func = async (req, res, entity) => {
+	let { funcName, keys }  = req.body
+	const schema = schemas[entity].schema
+	console.log("func:", funcName, keys,req.body)
+	try {
+   	const ret  = await Promise.all(keys.map(key => db.func(`${funcName}_${entity}`, key)))
 		res.status(200).json(ret)
 		return 
 	} catch(err) {
 		console.log(err)
 		res.status(406).json({error:err})
 	}
+
 }
 
 module.exports = {
-  fetch, fetchRoutes, fetchTags,fetchByName, update, insert, remove, runQuery
+  fetch, fetchRoutes, fetchTags,fetchByName, update, insert, remove, runQuery ,func
 }
