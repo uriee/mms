@@ -19,7 +19,7 @@ exports.users = {
 			},
 		},
 
-		schema: {
+		schema: {			
 
 			pkey: 'user_id' ,
 

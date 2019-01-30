@@ -12,6 +12,8 @@ const {process} = require('../schemas/process.js')
 const {locations} = require('../schemas/locations.js') 
 const {kit} = require('../schemas/kit.js') 
 const {bom} = require('../schemas/bom.js') 
+const {iden} = require('../schemas/iden.js') 
+const {identifier} = require('../schemas/identifier.js') 
 const {proc_act} = require('../schemas/proc_act.js') 
 const {serial_act} = require('../schemas/serial_act.js') 
 
@@ -56,8 +58,10 @@ const schemas = {
 	serial_act: serial_act,	
 	kit : kit,
 	bom : bom,
+	iden : iden,
 	locations : locations,
 	work_report : work_report,
+	identifier : identifier,
 }
 
 const fillTemplate = function(templateString, templateVars){
@@ -119,7 +123,7 @@ const fetch = async (request, response, entity) => {
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
 		const sql = schemas[entity].sql.all + (zoom === '1' ? zoomSql  : filterSql)  + (schemas[entity].sql.final || '') + ' limit 100;'
-		const main = await db.any(sql,[lang,name,parent]).then(x=>x)
+		const main = await db.any(sql,[lang,name,parent || 0]).then(x=>x)
 		const type = !main[0] ? 201 : 201
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
 		const chooserQueries = Object.values(schemas[entity].sql.choosers)	

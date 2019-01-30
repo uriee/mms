@@ -40,14 +40,15 @@ const entityDict = {
   'process' : 'process',
   'proc_act' : 'proc_act',
   'serial_act' : 'serial_act',
-  'work_report' : 'work_report' 
+  'work_report' : 'work_report', 
+  'identifier ' : 'identifier'   
 }
 const getEntity = (entity) => entityDict[entity] || entity
 
 app.post('/mymes/signin', User.signin)
 app.post('/mymes/remove', (req,res) => remove(req,res,getEntity(req.body.entity)))
 app.post('/mymes/update', (req,res) => update(req,res,getEntity(req.body.entity)))
-app.post('/mymes/insert', (req,res) => insert(req,res,getEntity(req.body.entity)))
+app.post('/mymes/insert', (req,res) => req.body.entity === 'user' ? User.signup(req,res) :  insert(req,res,getEntity(req.body.entity)))
 app.post('/mymes/func', (req,res) => func(req,res,getEntity(req.body.entity)))
 
 app.post('/mymes/updateroutes', (req,res) => {
@@ -82,6 +83,8 @@ router.get('/work_report', (req,res) => fetch(req, res, 'work_report'))
 router.get('/actions', (req,res) => fetch(req, res, 'actions'))
 router.get('/locations', (req,res) => fetch(req, res, 'locations'))
 router.get('/bom', (req,res) => fetch(req, res, 'bom'))
+router.get('/iden', (req,res) => fetch(req, res, 'iden'))
+router.get('/identifier', (req,res) => fetch(req, res, 'identifier'))
 router.get('/kit', (req,res) => fetch(req, res, 'kit'))
 router.get('/process', (req,res) => fetch(req, res, 'process'))
 router.get('/proc_act', (req,res) => fetch(req, res, 'proc_act'))

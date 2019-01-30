@@ -15,8 +15,8 @@ const hashPassword = (password) => {
 // Create new user in db
 const createUser = (user) => {
   return db.one(
-    'insert into users(username, password_digest, token, created_at, email, "currentAuthority") VALUES ($1, $2, $3, $4, $5, $6) RETURNING  username, created_at, token, email, "currentAuthority"' ,
-    [user.userName, user.password_digest, user.token, new Date(), user.email, user.currentAuthority]
+    'insert into users(username, password_digest, token, created_at, "currentAuthority") VALUES ($1, $2, $3, $4, $5) RETURNING  username, created_at, token,"currentAuthority"' ,
+    [user.name, user.password_digest, user.token, new Date(), user.currentAuthority]
   )
 }
 
@@ -89,6 +89,7 @@ const authenticate_old = (userReq) => {
 
 const signup = (request, response, next) => {
    const user = request.body
+   console.log("user:",user)
   hashPassword(user.password)
     .then((hashedPassword) => {
       delete user.password
@@ -101,7 +102,10 @@ const signup = (request, response, next) => {
       delete user.PASSWORD_DIGEST
       response.status(201).json({ user })
     })
-    .catch((err) => console.error(err))
+    .catch((err) => {
+      response.status(401).json(user)
+      console.error(err)
+    })
 }
 
 const signin = (request, response) => {
