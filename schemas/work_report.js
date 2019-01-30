@@ -8,14 +8,19 @@
 	schema.fkeys : keys that need to be fetched from server in order to preform insert/update
 	schema.tables : the tables that need to be updated 
 */
+
 exports.work_report = {
 		sql: {
-			all: `select wr.id, wr.quant, users.username , wr.sig_date, wr.sig_user,
+			all: `select wr.id, wr.quant, users.username as username , wr.sig_date, wr.sig_user, sa.balance as maxq ,
 					serial.name as serialname, action.name as actname
-					from mymes.work_report as wr , mymes.serials as serial, mymes.actions as action, users
+					from mymes.work_report as wr , mymes.serials as serial, mymes.actions as action, users, mymes.serial_act as sa
 					where serial.id = wr.serial_id 
 					and users.id = wr.sig_user
-					and action.id = wr.act_id `,					
+					and action.id = wr.act_id 
+					and sa.serial_id = wr.serial_id 
+					and sa.act_id = wr.act_id
+					and ($3 = 0 or serial.id = $3) 
+					`,					
 
 			choosers :{
 				seract : `select serial.name as serialname,act.name as actname
