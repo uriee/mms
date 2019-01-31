@@ -1,6 +1,7 @@
 const express = require('express');
 const User = require('./models/User')
 const {fetch, fetchTags, update, insert, remove, fetchByName, fetchRoutes, runQuery, func} = require('./models/Schemas')
+const {fetchDashData} = require('./models/Dash')
 const { bugInsert } = require('./models/utils')
 const app = express();
 const bodyParser = require('body-parser');
@@ -91,6 +92,8 @@ router.get('/proc_act', (req,res) => fetch(req, res, 'proc_act'))
 router.get('/serial_act', (req,res) => fetch(req, res, 'serial_act'))
 router.get('/tags', (req,res) => fetchTags(req, res, 'tags'))
 router.get('/routes', (req,res) => fetchRoutes(req, res))
+
+router.get('/dash', (req,res) => fetchDashData(req, res))
 
 app.post('/mymes/bug', (req,res) => bugInsert(req,res))
 
