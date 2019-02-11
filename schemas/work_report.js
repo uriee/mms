@@ -19,7 +19,8 @@ exports.work_report = {
 					and action.id = wr.act_id 
 					and sa.serial_id = wr.serial_id 
 					and sa.act_id = wr.act_id
-					and ($3 = 0 or serial.id = $3) 
+					and ($3 = 0 or serial.id = $3)
+					order by wr.sig_date desc
 					`,					
 
 			choosers :{

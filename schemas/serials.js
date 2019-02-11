@@ -31,10 +31,6 @@ exports.serials = {
 			function: 'cpy_acts_proc2ser',
 			parameters: ['id','procname']
 		},
-		post_update: {
-			function: 'cpy_acts_proc2ser',
-			parameters: ['id','procname']
-		},
 		post_delete: {
 			tables: [{table : 'locations', key:'serial_id'},{table :'kit',key : 'serial_id'},{table :'serial_act',key : 'serial_id'}]
 		},		
