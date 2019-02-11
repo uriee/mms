@@ -16,7 +16,7 @@ const {iden} = require('../schemas/iden.js')
 const {identifier} = require('../schemas/identifier.js') 
 const {proc_act} = require('../schemas/proc_act.js') 
 const {serial_act} = require('../schemas/serial_act.js') 
-
+const {preferences} = require('../schemas/preferences.js') 
 const {departments} = require('../schemas/departments.js')
 const {users} = require('../schemas/users.js')
 const {profiles} = require('../schemas/profiles.js')
@@ -62,6 +62,7 @@ const schemas = {
 	locations : locations,
 	work_report : work_report,
 	identifier : identifier,
+	preferences : preferences,
 }
 
 const fillTemplate = function(templateString, templateVars){
