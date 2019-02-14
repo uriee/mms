@@ -110,6 +110,7 @@ const signup = (request, response, next) => {
 
 const signin = (request, response) => {
   const userReq = request.body
+  console.log('~~~~~~~~~',userReq)
   let user
   findUser(userReq)
     .then(foundUser => {

@@ -6,6 +6,7 @@ const {employees} = require('../schemas/employees.js')
 const {parts} = require('../schemas/parts.js')
 const {serials} = require('../schemas/serials.js') 
 const {serial_statuses} = require('../schemas/serial_statuses.js') 
+const {part_status} = require('../schemas/part_status.js') 
 const {actions} = require('../schemas/actions.js') 
 const {work_report} = require('../schemas/work_report.js') 
 const {process} = require('../schemas/process.js') 
@@ -52,6 +53,7 @@ const schemas = {
 	mnt_plan_items : mnt_plan_items,
 	serials : serials, 
 	serial_statuses : serial_statuses,
+	part_status : part_status,	
 	actions : actions,
 	process : process,
 	proc_act: proc_act,
