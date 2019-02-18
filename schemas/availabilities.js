@@ -10,9 +10,9 @@ const {languagesArray} = require('./schema_conf.js')
 *//*,json_agg(json_build_object('id', availability_profiles.id,'weekday', weekday, 'from', from_time, 'to', to_time)) as availabilities*/
 exports.availabilities = {
 		sql: {
-			all: `select availabilities.id,availabilities.availability_profile_id, availability_profiles.name , weekday , from_time , to_time
-			    from mymes.availability_profiles as availability_profiles , mymes.availabilities as availabilities
-				where availability_profile_id = availability_profiles.id and availability_profiles.name = $2 `,
+			all: `select id,availability_profile_id, weekday , from_time , to_time
+			    from mymes.availabilities as availabilities
+				where availabilities.availability_profile_id = $3 `,
 
 			final: ' order by 3,4 ',				
 
@@ -26,8 +26,8 @@ exports.availabilities = {
 
 			fkeys: {
 				availability_profile_id : {
-					query : `select id from mymes.availability_profiles where name = $1;`,
-					value : 'name'
+					query : `select id from mymes.availability_profiles where id = $1;`,
+					value : 'parent'
 				},
 				
 			},
