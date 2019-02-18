@@ -53,7 +53,9 @@ exports.parts = {
 						},						
 						{
 							field: 'name',
-							variable : 'name'
+							variable : 'name',
+							required : true
+
 						},
 						{
 							field: 'revision',

@@ -215,8 +215,18 @@ const insert = async (req, res, entity) => {
 		
 	try{
 		const keys = await getFkeys(schema.fkeys,params)
-	console.log('===========3:',keys)
-		const tables = Object.keys(schema.tables)
+	    const tables = Object.keys(schema.tables)
+	console.log('===========3:',keys,params)    
+
+		/*Check to see if all required fields has value*/
+		const required = tables.reduce(
+			(ret,table) => ret + schema.tables[table].fields.filter(field => field.required).reduce(
+				(o,field)=>{
+				console.log("_-_:",o,field,params[field.field]);
+				return o + (params[field.field] ? 1 : 0)} , 0) 	,0
+			) || 1
+		if(!required) throw new Error('There are some required fields with no value!');
+		
 		const maintable = schema.tables[tables[0]]
 		const insertFields = maintable.fields.filter(x => x.field && (x.value || keys[x.fkey]>'' ||params[x.variable]>''))
 		let fields = insertFields.map(x => x.field)
