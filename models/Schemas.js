@@ -249,7 +249,10 @@ const insert = async (req, res, entity) => {
 				let field = table.fill.field
 				return await Promise.all(table.fill.values.map(val => {
 					let values = table.fields.filter(x => x.field )
-											 .map(x =>  x.field === field ? val :x.hasOwnProperty('fkey') ? keys[x.fkey] : `'${params[x.variable+(val === params['lang_id'] ? '_t' : '')]}'`)
+											 .map(x =>  x.field === field ?
+											 	 val : x.hasOwnProperty('fkey') ?
+											 	 keys[x.fkey] : `'${params[x.variable+(val === params['lang_id'] || !params[x.variable] ? '' : '_t')]}'`
+											 )
 					let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`
 					console.log("insert query if",sql)
 					return db.one(sql).then(x => x)
