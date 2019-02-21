@@ -7,12 +7,12 @@ const {languagesArray} = require('./schema_conf.js')
 	schema.fkeys : keys that need to be fetched from server in order to preform insert/update
 	schema.tables : the tables that need to be updated 
 
-*//*,json_agg(json_build_object('id', availability_profiles.id,'weekday', weekday, 'from', from_time, 'to', to_time)) as availabilities*/
-exports.availabilities = {
+*//*,json_agg(json_build_object('id', availability_profiles.id,'flag_o', flag_o, 'from', from_date, 'to', to_date)) as ap_holidays*/
+exports.ap_holidays = {
 		sql: {
-			all: `select id,availability_profile_id, weekday, flag_o, from_time , to_time
-			    from mymes.availabilities as availabilities
-				where availabilities.availability_profile_id = $3 `,
+			all: `select id,availability_profile_id, flag_o , from_date , to_date
+			    from mymes.ap_holidays as ap_holidays
+				where ap_holidays.availability_profile_id = $3 `,
 
 			final: ' order by 3,4 ',				
 
@@ -33,7 +33,7 @@ exports.availabilities = {
 			},
 
 			tables : {
-				availabilities :{
+				ap_holidays :{
 					fields : [
 						{
 							field: 'availability_profile_id',
@@ -41,22 +41,18 @@ exports.availabilities = {
 						},
 					
 						{
-							field: 'weekday',
-							variable : 'weekday'
-						},
-						{
 							field: 'flag_o',
 							variable : 'flag_o'
+						},
+						{
+							field: 'from_date',
+							variable : 'from_date',
+							conv: '::timestamp'
 						},						
 						{
-							field: 'from_time',
-							variable : 'from_time',
-							conv: '::timestamp::time without time zone'
-						},						
-						{
-							field: 'to_time',
-							variable : 'to_time',
-							conv : '::timestamp::time'
+							field: 'to_date',
+							variable : 'to_date',
+							conv : '::timestamp without time zone'
 						},
 						{
 							key: 'id'

@@ -26,6 +26,7 @@ const {resource_groups} = require('../schemas/resource_groups.js')
 const {resources} = require('../schemas/resources.js')
 const {availability_profiles} = require('../schemas/availability_profiles.js')
 const {availabilities} = require('../schemas/availabilities.js') 
+const {ap_holidays} = require('../schemas/ap_holidays.js') 
 const {malfunctions} = require('../schemas/malfunctions.js') 
 const {malfunction_types} = require('../schemas/malfunction_types.js') 
 const {repairs} = require('../schemas/repairs.js') 
@@ -45,6 +46,7 @@ const schemas = {
 	resources : resources,	
 	availability_profiles : availability_profiles,
 	availabilities : availabilities,
+	ap_holidays : ap_holidays,	
 	malfunctions : malfunctions,
 	malfunction_types : malfunction_types,
 	repairs : repairs,
@@ -122,10 +124,11 @@ const fetch = async (request, response, entity) => {
 							).filter(field => field.value)
 	
 	try {
-		const filterSql = filters.reduce((string, filter)=> string+` and ${filter.field} like '%${filter.value}%'`, '')
+		const filterSql = filters.reduce((string, filter)=> string+` and ${filter.field}::text like '%${filter.value.toString()}%'` , '')
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
 		const sql = schemas[entity].sql.all + (zoom === '1' ? zoomSql  : filterSql)  + (schemas[entity].sql.final || '') + ' limit 100;'
+		console.log("fetch sql:",sql)
 		const main = await db.any(sql,[lang,name,parent || 0]).then(x=>x)
 		const type = !main[0] ? 201 : 201
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
@@ -315,7 +318,7 @@ const update = async (req, res, entity) => {
 				  .map(tn =>{
 				  	const table = schema.tables[tn]
 				  	console.log("---------",allParams)
-				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field) && (allParams[field.field] || allParams[field.field] === false))
+				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field) && (allParams[field.field] || allParams[field.field] === false) && allParams[field.field] != 'Invalid date')
 				  							 .map(field => ({set : field.field, to: field.array ? allParams[field.field] : allParams[field.field]}))
 					/*console.log('~~~********:',sets)*/
 				  	const wheres = table.fields.filter(field => params.hasOwnProperty(field.key))
