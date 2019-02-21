@@ -7,12 +7,12 @@ const {languagesArray} = require('./schema_conf.js')
 	schema.fkeys : keys that need to be fetched from server in order to preform insert/update
 	schema.tables : the tables that need to be updated 
 
-*//*,json_agg(json_build_object('id', availability_profiles.id,'flag_o', flag_o, 'from', from_date, 'to', to_date)) as ap_holidays*/
-exports.ap_holidays = {
+*//*,json_agg(json_build_object('id', resources.id,'flag_o', flag_o, 'from', from_date, 'to', to_date)) as resource_timeoff*/
+exports.resource_timeoff = {
 		sql: {
-			all: `select id,availability_profile_id, flag_o , from_date , to_date
-			    from mymes.ap_holidays as ap_holidays
-				where ap_holidays.availability_profile_id = $3 `,
+			all: `select id,resource_id, flag_o , from_date , to_date
+			    from mymes.resource_timeoff as resource_timeoff
+				where resource_timeoff.resource_id = $3 `,
 
 			final: ' order by 3,4 ',				
 
@@ -22,22 +22,22 @@ exports.ap_holidays = {
 		},
 
 		schema: {
-			pkey: 'availability_profile_id' ,
+			pkey: 'resource_id' ,
 
 			fkeys: {
-				availability_profile_id : {
-					query : `select id from mymes.availability_profiles where id = $1;`,
+				resource_id : {
+					query : `select id from mymes.resources where id = $1;`,
 					value : 'parent'
 				},
 				
 			},
 
 			tables : {
-				ap_holidays :{
+				resource_timeoff :{
 					fields : [
 						{
-							field: 'availability_profile_id',
-							fkey: 'availability_profile_id'
+							field: 'resource_id',
+							fkey: 'resource_id'
 						},
 					
 						{

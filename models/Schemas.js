@@ -26,7 +26,7 @@ const {resource_groups} = require('../schemas/resource_groups.js')
 const {resources} = require('../schemas/resources.js')
 const {availability_profiles} = require('../schemas/availability_profiles.js')
 const {availabilities} = require('../schemas/availabilities.js') 
-const {ap_holidays} = require('../schemas/ap_holidays.js') 
+const {resource_timeoff} = require('../schemas/resource_timeoff.js') 
 const {malfunctions} = require('../schemas/malfunctions.js') 
 const {malfunction_types} = require('../schemas/malfunction_types.js') 
 const {repairs} = require('../schemas/repairs.js') 
@@ -46,7 +46,7 @@ const schemas = {
 	resources : resources,	
 	availability_profiles : availability_profiles,
 	availabilities : availabilities,
-	ap_holidays : ap_holidays,	
+	resource_timeoff : resource_timeoff,	
 	malfunctions : malfunctions,
 	malfunction_types : malfunction_types,
 	repairs : repairs,
@@ -212,7 +212,7 @@ const insert = async (req, res, entity) => {
 											    })									    
 		}catch(err) {
 			console.log("pre_insert:",err)
-			res.status(406).json({error: 'pre_insetr : '+err})
+			res.status(406).json({error: 'pre_insert : '+err})
 			return 0
 		}
 		
