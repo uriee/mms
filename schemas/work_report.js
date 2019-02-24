@@ -12,7 +12,7 @@
 exports.work_report = {
 		sql: {
 			all: `select wr.id, wr.quant, users.username as username , wr.sig_date, wr.sig_user, sa.balance as maxq ,
-					serial.name as serialname, action.name as actname
+					serial.name as serialname, action.name as actname ,concat(serial.name,':',action.name,'-',wr.quant) as name
 					from mymes.work_report as wr , mymes.serials as serial, mymes.actions as action, users, mymes.serial_act as sa
 					where serial.id = wr.serial_id 
 					and users.id = wr.sig_user

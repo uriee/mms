@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.kit = {
 		sql: {
-			all: `select kit.id, serials.name, kit.partname,  kit.quant, kit.balance, kit.lot 
+			all: `select kit.id, kit.partname, kit.quant, kit.balance, kit.lot 
 					from mymes.kit as kit ,mymes.serials as serials 
 					where serials.id = kit.serial_id
 					and serials.id = $3 

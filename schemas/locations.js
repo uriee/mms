@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.locations = {
 		sql: {
-			all: `select locations.id, part.name, part.id as parent, locations.partname,  locations.quant, locations.location, actions.name as act_name,
+			all: `select locations.id, part.id as parent, locations.partname,  locations.quant, locations.location, actions.name as act_name,
 					locations.x, locations.y, locations.z 
 					from mymes.locations as locations ,mymes.part as part, mymes.actions as actions
 					where part.id = locations.part_id

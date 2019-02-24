@@ -51,12 +51,12 @@ exports.availabilities = {
 						{
 							field: 'from_time',
 							variable : 'from_time',
-							conv: '::timestamp::time without time zone'
+							conv: '::time without time zone'
 						},						
 						{
 							field: 'to_time',
 							variable : 'to_time',
-							conv : '::timestamp::time'
+							conv : '::time'
 						},
 						{
 							key: 'id'

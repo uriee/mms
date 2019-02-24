@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.bom = {
 		sql: {
-			all: `select bom.id, part.name, bom.partname, bom.coef 
+			all: `select bom.id, bom.partname, bom.coef 
 					from mymes.bom as bom ,mymes.part as part 
 					where part.id = bom.parent_id
 					and part.id = $3 
