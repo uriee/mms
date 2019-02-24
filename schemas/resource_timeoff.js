@@ -21,6 +21,15 @@ exports.resource_timeoff = {
 
 		},
 
+		post_insert: {
+			function: 'cpy_resource_timeoffs',
+			parameters: ['id']
+		},	
+		post_delete: {
+			function: 'delete_resource_timeoffs',
+			parameters: ['id']
+		},			
+
 		schema: {
 			pkey: 'resource_id' ,
 

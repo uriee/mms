@@ -319,11 +319,11 @@ const update = async (req, res, entity) => {
 				  	const table = schema.tables[tn]
 				  	console.log("---------",allParams)
 				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field) && (allParams[field.field] || allParams[field.field] === false) && allParams[field.field] != 'Invalid date')
-				  							 .map(field => ({set : field.field, to: field.array ? allParams[field.field] : allParams[field.field]}))
+				  							 .map(field => ({set : field.field, to: allParams[field.field], conv: field.conv }))
 					/*console.log('~~~********:',sets)*/
 				  	const wheres = table.fields.filter(field => params.hasOwnProperty(field.key))
 				  							   .map(field => ({where : field.field > '' ? field.field : field.key , equals: params[field.key]}))
-				  	const sqlSet = sets.reduce((old,set) => old + `${set.set} = '${set.to}',`,'').slice(0,-1)
+				  	const sqlSet = sets.reduce((old,set) => old + `${set.set} = '${set.to}'${set.conv ? set.conv: ''},`,'').slice(0,-1)
 				  	const sqlWhere = wheres.reduce((old,where) => old + `${where.where} = '${where.equals}' and `,'').slice(0,-5)
 				  	//const keyField = table.fields.filter(x => x.key && !x.field)[0].key
 					/*const sql = `UPDATE mymes.${tn}
@@ -377,7 +377,7 @@ const remove = async (req, res, entity) => {
 			}
 		})
 		.filter(x => x.key)
-	const pre_delete = schemas[entity].pre_delete
+	const {pre_delete, post_delete} = schemas[entity]
 	tables = pre_delete && pre_delete.tables ? [...tables, ...pre_delete.tables] : tables
 	const sqls = tables.map(table => `delete from ${!isPublic ? 'mymes.' : ''}${table.table} where ${table.key} = `)	
 	const finalSqls	 = params.keys && sqls && params.keys.reduce((o,x) => {
@@ -388,12 +388,17 @@ const remove = async (req, res, entity) => {
 
 	try {
    	console.log("Param:",params)
-	const post = pre_delete && params.keys && await db.func(pre_delete.function, [params.keys])
+	const pre = pre_delete && params.keys && await db.func(pre_delete.function, [params.keys])
 											    .then(data => {
 											        console.log(`Return from function - ${pre_delete.function} : ${data[0]}`); 
 											    })	
+
    	const ret  = await Promise.all(finalSqls.map(sql => runQuery(sql)))
 
+	const post = post_delete && params.keys && await db.func(post_delete.function, [params.keys])
+											    .then(data => {
+											        console.log(`Return from function - ${post_delete.function} : ${data[0]}`); 
+											    })	
 	res.status(200).json(ret)
 		return 
 	} catch(err) {
