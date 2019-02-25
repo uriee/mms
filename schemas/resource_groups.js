@@ -42,7 +42,7 @@ exports.resource_groups = {
 					},
 				resource_ids: {
 
-					query: `select id from mymes.resources where name::text = any(string_to_array($1,','));`,
+					query: `select id from mymes.resources where name::text = any(string_to_array(trim($1,'{}'),','));`,
 					value: 'resource_names',
 					array: true
 				},
