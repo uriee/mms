@@ -25,9 +25,9 @@ exports.resource_timeoff = {
 			function: 'cpy_resource_timeoffs',
 			parameters: ['id']
 		},	
-		post_delete: {
+		pre_delete: {
 			function: 'delete_resource_timeoffs',
-			parameters: ['id']
+			parameters: ['keys']
 		},			
 
 		schema: {
