@@ -11,18 +11,17 @@
 
 exports.work_report = {
 		sql: {
-			all: `select wr.id, wr.quant, users.username as username , wr.sig_date, wr.sig_user, sa.balance as maxq ,
-					serial.name as serialname, action.name as actname ,concat(serial.name,':',action.name,'-',wr.quant) as name
-					from mymes.work_report as wr , mymes.serials as serial, mymes.actions as action, users, mymes.serial_act as sa
-					where serial.id = wr.serial_id 
-					and users.id = wr.sig_user
-					and action.id = wr.act_id 
-					and sa.serial_id = wr.serial_id 
-					and sa.act_id = wr.act_id
-					and ($3 = 0 or serial.id = $3)
-					order by wr.sig_date desc
+			all: `select work_report.id, work_report.quant, users.username as username , work_report.sig_date, work_report.sig_user, sa.balance as maxq ,
+					serial.name as serialname, action.name as actname ,concat(serial.name,':',action.name,'-',work_report.quant) as name
+					from mymes.work_report as work_report , mymes.serials as serial, mymes.actions as action, users, mymes.serial_act as sa
+					where serial.id = work_report.serial_id 
+					and users.id = work_report.sig_user
+					and action.id = work_report.act_id 
+					and sa.serial_id = work_report.serial_id 
+					and sa.act_id = work_report.act_id
+					and ($3 = 0 or serial.id = $3) 
 					`,					
-
+			final: 'order by work_report.sig_date desc ',
 			choosers :{
 				seract : `select serial.name as serialname,act.name as actname
 						  from mymes.serials as serial,mymes.actions as act, mymes.serial_act as sa 
