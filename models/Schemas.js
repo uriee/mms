@@ -127,7 +127,7 @@ const fetch = async (request, response, entity) => {
 		const filterSql = filters.reduce((string, filter)=> string+` and ${filter.field}::text like '%${filter.value.toString()}%'` , '')
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
-		const sql = schemas[entity].sql.all + (zoom === '1' ? zoomSql  : filterSql)  + (schemas[entity].sql.final || '') + ' limit 100;'
+		const sql = schemas[entity].sql.all + (zoom === '1' ? zoomSql  : filterSql) +' '+ (schemas[entity].sql.final || '') + ' limit 100;'
 		console.log("fetch sql:",sql)
 		const main = await db.any(sql,[lang,name,parent || 0]).then(x=>x)
 		const type = !main[0] ? 201 : 201
@@ -170,7 +170,7 @@ const getFkeys = async (fkeys,params) => {
 				query.value.map(value =>  Array.isArray(params[value]) ? params[value].toString() :	params[value]) :
 				Array.isArray(params[query.value]) ? params[query.value].toString() :[params[query.value]]
 
-			console.log("***",query.query, parameters)
+			console.log("**********",query.query, parameters)
 			var res = query.hasOwnProperty('query') ?
 						await db.any(query.query, parameters).then(x => Array.isArray(x)? x.map(x=> x.id) : x.id) :
 					    params[query.value]
@@ -318,7 +318,7 @@ const update = async (req, res, entity) => {
 				  .map(tn =>{
 				  	const table = schema.tables[tn]
 				  	console.log("---------",allParams)
-				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field) && (allParams[field.field] || allParams[field.field] === false) && allParams[field.field] != 'Invalid date')
+				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field) && (allParams[field.field] || allParams[field.field] === false))
 				  							 .map(field => ({set : field.field, to: allParams[field.field], conv: field.conv }))
 					/*console.log('~~~********:',sets)*/
 				  	const wheres = table.fields.filter(field => params.hasOwnProperty(field.key))
