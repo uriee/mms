@@ -127,7 +127,7 @@ const fetch = async (request, response, entity) => {
 		const filterSql = filters.reduce((string, filter)=> string+` and ${filter.field}::text like '%${filter.value.toString()}%'` , '')
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
-		const sql = schemas[entity].sql.all + (zoom === '1' ? zoomSql  : filterSql) +' '+ (schemas[entity].sql.final || '') + ' limit 100;'
+		const sql = `${schemas[entity].sql.all} ${(zoom === '1' ? zoomSql  : filterSql)} ${(schemas[entity].sql.final || '')} limit 100;`
 		console.log("fetch sql:",sql)
 		const main = await db.any(sql,[lang,name,parent || 0]).then(x=>x)
 		const type = !main[0] ? 201 : 201
@@ -235,12 +235,16 @@ const insert = async (req, res, entity) => {
 		let fields = insertFields.map(x => x.field)
 
 		let values = insertFields
-					.map(x => x.hasOwnProperty('value') ? 
+					.map(x => {
+
+						params[x.variable] = x.func ? x.func(params[x.variable]) : params[x.variable] /* format  the value with the formating function from schema*/
+
+						return x.hasOwnProperty('value') ? 
 						`'${x.value}'` :
 						x.hasOwnProperty('fkey') ?
 						(Array.isArray(keys[x.fkey]) && keys[x.fkey].length > 1 ? `'{${keys[x.fkey]}}'` : keys[x.fkey]) :
 						`'${params[x.variable]}'${x.conv ? x.conv: ''}`
-					)
+					})
 		let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tables[0]}(${fields}) values(${values}) returning id;`
 		console.log("insert query maintable",sql)
 		new_id = keys[id] = await db.one(sql).then(x => x.id)

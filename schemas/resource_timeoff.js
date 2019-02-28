@@ -8,9 +8,11 @@ const {languagesArray} = require('./schema_conf.js')
 	schema.tables : the tables that need to be updated 
 
 *//*,json_agg(json_build_object('id', resources.id,'flag_o', flag_o, 'from', from_date, 'to', to_date)) as resource_timeoff*/
+const ts_range = (text) => text.replace('{','[').replace('}',')')
+
 exports.resource_timeoff = {
 		sql: {
-			all: `select id,resource_id, flag_o , from_date , to_date
+			all: `select id,resource_id, flag_o , from_date , to_date, ts_range
 			    from mymes.resource_timeoff as resource_timeoff
 				where resource_timeoff.resource_id = $3 `,
 
@@ -20,16 +22,7 @@ exports.resource_timeoff = {
 			},
 
 		},
-
-		post_insert: {
-			function: 'cpy_resource_timeoffs',
-			parameters: ['id']
-		},	
-		pre_delete: {
-			function: 'delete_resource_timeoffs',
-			parameters: ['keys']
-		},			
-
+	
 		schema: {
 			pkey: 'resource_id' ,
 
@@ -63,6 +56,12 @@ exports.resource_timeoff = {
 							variable : 'to_date',
 							conv : '::timestamp without time zone'
 						},
+						{
+							field: 'ts_range',
+							variable : 'ts_range',
+							conv : '::tsrange',
+							func : ts_range
+						},						
 						{
 							key: 'id'
 						},						
