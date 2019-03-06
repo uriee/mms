@@ -1,6 +1,6 @@
 const express = require('express');
 const User = require('./models/User')
-const {fetch, fetchTags, update, insert, remove, fetchByName, fetchRoutes, runQuery, func} = require('./models/Schemas')
+const {fetch, fetchTags, update, insert, remove, fetchNotifications, fetchRoutes, runQuery, func} = require('./models/Schemas')
 const {fetchDashData} = require('./models/Dash')
 const { bugInsert } = require('./models/utils')
 const app = express();
@@ -63,6 +63,7 @@ router.get('/t', function(req, res) {
     });
 });
 
+router.get('/notifications', (req,res) => fetchNotifications(req, res))
 router.get('/user', (req,res) => fetch(req, res, 'users'))
 router.get('/profile', (req,res) => fetch(req, res, 'profiles'))
 router.get('/emp', (req,res) => fetch(req, res, 'employees'))

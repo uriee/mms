@@ -110,6 +110,18 @@ const fetchRoutes = async(request, response) =>{
 		console.log(e)
 	}
 }
+
+const fetchNotifications = async(request, response) =>{
+	const sql = `select id as identifier,name as id,title,type 
+				 from mymes.notifications 
+				 where read is not true;`
+	try{
+		const ret =  await db.any(sql).then(x=>x)	
+		response.status(201).json(ret)
+	}catch(e){
+		console.log(e)
+	}
+}
 /*
 Populate the response data from DB with the requested data of a certain entity
 */
@@ -124,7 +136,7 @@ const fetch = async (request, response, entity) => {
 							).filter(field => field.value)
 	
 	try {
-		const filterSql = filters.reduce((string, filter)=> string+` and ${filter.field}::text like '%${filter.value.toString()}%'` , '')
+		const filterSql = filters.reduce((string, filter)=> string+` and UPPER(${filter.field}::text) like '%${filter.value.toString().toUpperCase()}%'` , '')
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
 		const sql = `${schemas[entity].sql.all} ${(zoom === '1' ? zoomSql  : filterSql)} ${(schemas[entity].sql.final || '')} limit 100;`
@@ -372,27 +384,23 @@ const remove = async (req, res, entity) => {
 	let params = req.body
 	const schema = schemas[entity].schema
 	const isPublic = !!schemas[entity].public	
-	let tables = Object.keys(schema.tables)
-		.map(table => {
-			const key = schema.tables[table].fields.reduce((o,x) => x.hasOwnProperty('key') && x.key === 'id' ? x.field || x.key : o , null)
-			return {
-				'table' : table,
-				'key' : key
-			}
-		})
-		.filter(x => x.key)
+	let table = Object.keys(schema.tables)[0] /*all  translation tables are now deleted by DB constarint */
+	const key = schema.tables[table].fields.filter(x => {console.log("---",x); return x.key})[0].key
+	console.log("ooooo:",key)
 	const {pre_delete, post_delete} = schemas[entity]
-	tables = pre_delete && pre_delete.tables ? [...tables, ...pre_delete.tables] : tables
-	const sqls = tables.map(table => `delete from ${!isPublic ? 'mymes.' : ''}${table.table} where ${table.key} = `)	
-	const finalSqls	 = params.keys && sqls && params.keys.reduce((o,x) => {
-															sqls.forEach(statement => o.push(statement + x + ' returning 1;'))
-															return o
+
+	/* cascading delete is preformed by DB foreign keys constraints*
+	/*tables = pre_delete && pre_delete.tables ? [...tables, ...pre_delete.tables] : tables*/
+	const sql = `delete from ${!isPublic ? 'mymes.' : ''}${table} where ${key} = `
+	const finalSqls	 = params.keys && sql && params.keys.reduce((o,x) => {
+															//o.push(sql + x + ' returning 1;')
+															return [...o , `${sql}${x} returning 1; `]
 															}
 														,[])
 
 	try {
    	console.log("Param:",params)
-	const pre = pre_delete && params.keys && await db.func(pre_delete.function, [params.keys])
+	const pre = pre_delete && pre_delete.function && params.keys && await db.func(pre_delete.function, [params.keys])
 											    .then(data => {
 											        console.log(`Return from function - ${pre_delete.function} : ${data[0]}`); 
 											    })	
@@ -427,5 +435,5 @@ const func = async (req, res, entity) => {
 }
 
 module.exports = {
-  fetch, fetchRoutes, fetchTags,fetchByName, update, insert, remove, runQuery ,func
+  fetch, fetchRoutes, fetchTags,fetchByName, update, insert, remove, runQuery ,func, fetchNotifications
 }

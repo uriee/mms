@@ -22,10 +22,6 @@ exports.parts = {
 
 		},
 
-		post_delete: {
-			tables: [{table : 'bom', key:'parent_id'}]
-		},
-
 
 		schema: {
 			pkey: 'part_id' ,
