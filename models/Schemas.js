@@ -205,7 +205,8 @@ const getFkeys = async (fkeys,params) => {
 
 
 const insert = async (req, res, entity) => {
-	var params = req.body
+let params = {}
+	Object.keys(req.body).forEach(x=> params[x] = typeof req.body[x] === 'string' ?  req.body[x].replace(/'/g,"") : req.body[x]) //Protection againt sql injection
 	console.log("___---__-:",params)
 	Object.keys(params).forEach(x => {
 		params[x] = Array.isArray(params[x]) ? (params[x].length === 1 ? `{${params[x][0]}}` : `{${params[x]}}`) : params[x]
@@ -307,7 +308,8 @@ const insert = async (req, res, entity) => {
 }
 
 const update = async (req, res, entity) => {
-	let params = req.body
+	let params = {}
+	Object.keys(req.body).forEach(x=> params[x] = typeof req.body[x] === 'string' ?  req.body[x].replace(/'/g,"") : req.body[x]) //Protection againt sql injection
 	const schema = schemas[entity].schema
 	const isPublic = !!schemas[entity].public
 	const tables= schema.tables
@@ -381,11 +383,12 @@ const update = async (req, res, entity) => {
 
 
 const remove = async (req, res, entity) => {
-	let params = req.body
+let params = {}
+	Object.keys(req.body).forEach(x=> params[x] = typeof req.body[x] === 'string' ?  req.body[x].replace(/'/g,"") : req.body[x]) //Protection againt sql injection
 	const schema = schemas[entity].schema
 	const isPublic = !!schemas[entity].public	
 	let table = Object.keys(schema.tables)[0] /*all  translation tables are now deleted by DB constarint */
-	const key = schema.tables[table].fields.filter(x => {console.log("---",x); return x.key})[0].key
+	const key = schema.tables[table].fields.filter(x =>  x.key)[0].key
 	console.log("ooooo:",key)
 	const {pre_delete, post_delete} = schemas[entity]
 
