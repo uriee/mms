@@ -40,7 +40,10 @@ exports.mnt_plan_items = {
 					fields : [
 						{
 							field: 'resource_id',
-							fkey: 'resource_id'
+							fkey: 'resource_id',
+							table: 'resources',
+							filterField : 'name',
+							filterValue: 'resource_name',								
 						},
 						{
 							field: 'mnt_plan_id',

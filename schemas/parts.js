@@ -41,7 +41,10 @@ exports.parts = {
 					fields : [
 						{
 							field: 'part_status_id',
-							 fkey : 'part_status_id'
+							fkey : 'part_status_id',
+							table: 'part_status',
+							filterField : 'name',
+							filterValue: 'part_status',								 
 						},
 						{
 							field: 'active',

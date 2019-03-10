@@ -86,7 +86,10 @@ exports.serials = {
 						},						
 						{
 							field: 'status',
-							fkey : 'status'
+							fkey : 'status',
+							table: 'serial_statuses',
+							filterField : 'name',
+							filterValue: 'status',							
 						},																
 						{
 							field: 'end_date',

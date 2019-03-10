@@ -131,9 +131,10 @@ const fetch = async (request, response, entity) => {
 	const filters = flatten(	
 							Object.keys(tables)
 							.map(table=> tables[table].fields
-								.map(x => ({field : `${table}.${x.field || x.key}`,value : request.query[x.field || x.key]}))
+								.map(x => ({field : `${x.table || table}.${x.filterField || x.field || x.key}`,value : request.query[x.filterValue || x.field || x.key]}))
 								)
 							).filter(field => field.value)
+	console.log("TTTAAABLLEESSS:",filters)
 	
 	try {
 		const filterSql = filters.reduce((string, filter)=> string+` and UPPER(${filter.field}::text) like '%${filter.value.toString().toUpperCase()}%'` , '')
@@ -335,7 +336,6 @@ const update = async (req, res, entity) => {
 		const ret = Promise.all(tableNames.filter(tn => tables[tn].fields.some(field => allParams.hasOwnProperty(field.field)))
 				  .map(tn =>{
 				  	const table = schema.tables[tn]
-				  	console.log("---------",allParams)
 				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field) && (allParams[field.field] || allParams[field.field] === false))
 				  							 .map(field => ({set : field.field, to: allParams[field.field], conv: field.conv }))
 					/*console.log('~~~********:',sets)*/

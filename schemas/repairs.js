@@ -48,15 +48,24 @@ exports.repairs = {
 					fields : [
 						{
 							field: 'malfunction_id',
-							fkey : 'malfunction_id'
+							fkey : 'malfunction_id',
+							table: 'mf',
+							filterField : 'name',
+							filterValue: 'malfunction_name',								
 						},
 						{
 							field: 'employee_id',
-							fkey : 'employee_id'
+							fkey : 'employee_id',
+							table: 'emp',
+							filterField : 'name',
+							filterValue: 'employee_name',								
 						},						
 						{
 							field: 'repair_type_id',
-							fkey : 'repair_type_id'
+							fkey : 'repair_type_id',
+							table: 'rt',
+							filterField : 'name',
+							filterValue: 'type',								
 						},							
 						{
 							field: 'name',

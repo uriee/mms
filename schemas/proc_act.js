@@ -43,7 +43,10 @@ exports.proc_act = {
 					fields : [
 						{
 							field: 'process_id',
-							fkey : 'process_id'
+							fkey : 'process_id',
+							table: 'actions',
+							filterField : 'name',
+							filterValue: 'act_name',								
 						},					
 						{
 							field: 'pos',

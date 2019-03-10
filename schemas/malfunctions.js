@@ -47,11 +47,17 @@ exports.malfunctions = {
 					fields : [
 						{
 							field: 'equipment_id',
-							fkey : 'equipment_id'
+							fkey : 'equipment_id',
+							table: 'eq',
+							filterField : 'name',
+							filterValue: 'equipment_name',								
 						},
 						{
 							field: 'malfunction_type_id',
-							fkey : 'malfunction_type_id'
+							fkey : 'malfunction_type_id',
+							table: 'mt',
+							filterField : 'name',
+							filterValue: 'type',								
 						},							
 						{
 							field: 'name',

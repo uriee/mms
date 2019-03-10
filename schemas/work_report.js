@@ -74,7 +74,10 @@ exports.work_report = {
 						},						
 						{
 							field: 'act_id',
-							fkey : 'act_id'
+							fkey : 'act_id',
+							table: 'action',
+							filterField : 'name',
+							filterValue: 'actname',								
 						},
 						{
 							field: 'serial_id',
@@ -87,6 +90,10 @@ exports.work_report = {
 						{
 							field: 'sig_user',
 							fkey : 'sig_user',
+							table: 'users',
+							filterField : 'username',
+							filterValue: 'username',	
+
 						},																	
 						{
 							key: 'id'

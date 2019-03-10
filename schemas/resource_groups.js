@@ -57,11 +57,17 @@ exports.resource_groups = {
 					fields : [
 						{
 							field: 'dept_id',
-							fkey : 'dept_id'
-							},
+							fkey : 'dept_id',
+							table: 'dept',
+							filterField : 'name',
+							filterValue: 'dept_name',								
+						},
 						{
 							field: 'availability_profile_id',
-							fkey : 'availability_profile_id'
+							fkey : 'availability_profile_id',
+							table: 'ap',
+							filterField : 'name',
+							filterValue: 'ap_name',								
 						},							
 						{
 							field: 'name',

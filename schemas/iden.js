@@ -55,7 +55,10 @@ exports.iden = {
 						},
 						{
 							field: 'act_id',
-							fkey : 'act_id'
+							fkey : 'act_id',
+							table: 'action',
+							filterField : 'name',
+							filterValue: 'act_name',							
 						},
 						{
 							field: 'sig_user',
@@ -63,7 +66,10 @@ exports.iden = {
 						},
 						{
 							"field": "sig_date",
-							"variable" : "sig_date"
+							"variable" : "sig_date",
+							table: 'users',
+							filterField : 'username',
+							filterValue: 'user_name',							
 						},												
 						{
 							key: 'id'
