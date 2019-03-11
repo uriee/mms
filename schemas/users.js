@@ -37,10 +37,13 @@ exports.users = {
 						{
 							field: 'profile_id',
 							 fkey : 'profile_id'
-							},
+						},
 						{
 							field: 'username',
-							variable : 'name'
+							variable : 'name',
+							table: 'users',
+							filterField : 'username',
+							filterValue: 'name',							
 						},
 						{
 							field: 'title',
@@ -50,7 +53,10 @@ exports.users = {
 							"field": "email",
 							"variable" : "email"
 						},
-	
+						{
+							"field": "currentAuthority",
+							"variable" : "currentAuthority"
+						},
 						{
 							"field": "created_at",
 							"variable" : "created_at"

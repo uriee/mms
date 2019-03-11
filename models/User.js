@@ -15,7 +15,10 @@ const hashPassword = (password) => {
 // Create new user in db
 const createUser = (user) => {
   return db.one(
-    'insert into users(username, password_digest, token, created_at, "currentAuthority") VALUES ($1, $2, $3, $4, $5) RETURNING  username, created_at, token,"currentAuthority"' ,
+    `insert into users(username, password_digest, token, created_at, "currentAuthority",profile_id) 
+      select $1, $2, $3, $4, $5, id
+      from profiles where name = $5 
+       RETURNING  username, created_at, token,"currentAuthority"` ,
     [user.name, user.password_digest, user.token, new Date(), user.currentAuthority]
   )
 }

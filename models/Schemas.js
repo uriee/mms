@@ -126,7 +126,7 @@ const fetchNotifications = async(request, response) =>{
 Populate the response data from DB with the requested data of a certain entity
 */
 const fetch = async (request, response, entity) => {
-	const {lang,pageSize,currentPage,zoom,name,parent} = request.query
+	const {lang/*pageSize,currentPage*/,zoom,name,parent,user} = request.query
 	const tables = schemas[entity].schema.tables	
 	const filters = flatten(	
 							Object.keys(tables)
@@ -134,15 +134,14 @@ const fetch = async (request, response, entity) => {
 								.map(x => ({field : `${x.table || table}.${x.filterField || x.field || x.key}`,value : request.query[x.filterValue || x.field || x.key]}))
 								)
 							).filter(field => field.value)
-	console.log("TTTAAABLLEESSS:",filters)
 	
 	try {
 		const filterSql = filters.reduce((string, filter)=> string+` and UPPER(${filter.field}::text) like '%${filter.value.toString().toUpperCase()}%'` , '')
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
 		const sql = `${schemas[entity].sql.all} ${(zoom === '1' ? zoomSql  : filterSql)} ${(schemas[entity].sql.final || '')} limit 100;`
-		console.log("fetch sql:",sql)
-		const main = await db.any(sql,[lang,name,parent || 0]).then(x=>x)
+		console.log("fetch sql:",sql,request.query)
+		const main = await db.any(sql,[lang || '1',name || '',parent || '0' ,user || '']).then(x=>x)
 		const type = !main[0] ? 201 : 201
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
 		const chooserQueries = Object.values(schemas[entity].sql.choosers)	
@@ -341,7 +340,7 @@ const update = async (req, res, entity) => {
 					/*console.log('~~~********:',sets)*/
 				  	const wheres = table.fields.filter(field => params.hasOwnProperty(field.key))
 				  							   .map(field => ({where : field.field > '' ? field.field : field.key , equals: params[field.key]}))
-				  	const sqlSet = sets.reduce((old,set) => old + `${set.set} = '${set.to}'${set.conv ? set.conv: ''},`,'').slice(0,-1)
+				  	const sqlSet = sets.reduce((old,set) => old + `"${set.set}" = '${set.to}'${set.conv ? set.conv: ''},`,'').slice(0,-1)
 				  	const sqlWhere = wheres.reduce((old,where) => old + `${where.where} = '${where.equals}' and `,'').slice(0,-5)
 				  	//const keyField = table.fields.filter(x => x.key && !x.field)[0].key
 					/*const sql = `UPDATE mymes.${tn}
