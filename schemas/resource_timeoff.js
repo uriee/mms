@@ -12,7 +12,7 @@ const ts_range = (text) => text.replace('{','[').replace('}',')')
 
 exports.resource_timeoff = {
 		sql: {
-			all: `select id,resource_id, flag_o , from_date , to_date, ts_range
+			all: `select id,resource_id, flag_o , from_date , to_date, ts_range ,request ,approval ,approved_by
 			    from mymes.resource_timeoff as resource_timeoff
 				where resource_timeoff.resource_id = $3 `,
 

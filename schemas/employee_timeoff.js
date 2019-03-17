@@ -12,11 +12,13 @@ const ts_range = (text) => text.replace('{','[').replace('}',')')
 
 exports.employee_timeoff = {
 		sql: {
-			all: `select id,resource_id, flag_o , from_date , to_date, ts_range , approval, request, approved_by 
-			    from mymes.resource_timeoff as resource_timeoff
-				where resource_timeoff.resource_id = $3 `,
+			all: `select resource_timeoff.id,resource_id, flag_o , from_date , to_date, ts_range , approval, request, approved_by 
+			    from mymes.resource_timeoff as resource_timeoff, users , mymes.employees as employees
+				where resource_timeoff.resource_id = employees.id
+				and users.id = employees.user_id
+				and username = $4 `,
 
-			final: ' order by 3,4 ',				
+			final: ' order by 4 ',				
 
 			choosers :{
 			},
@@ -28,8 +30,10 @@ exports.employee_timeoff = {
 
 			fkeys: {
 				resource_id : {
-					query : `select id from mymes.resources where id = $1;`,
-					value : 'parent'
+					query : `select emp.id from mymes.employees as emp ,users
+							 where users.id = emp.user_id
+							 and username = $1;`,
+					value : 'sig_user'
 				},
 				
 			},
@@ -64,7 +68,8 @@ exports.employee_timeoff = {
 						},
 						{
 							field: 'approval',
-							variable : 'approval'
+							variable : 'approval',
+							value : "Pending approval"
 						},
 						{
 							field: 'request',
