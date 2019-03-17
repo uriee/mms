@@ -27,6 +27,7 @@ const {resources} = require('../schemas/resources.js')
 const {availability_profiles} = require('../schemas/availability_profiles.js')
 const {availabilities} = require('../schemas/availabilities.js') 
 const {resource_timeoff} = require('../schemas/resource_timeoff.js') 
+const {employee_timeoff} = require('../schemas/employee_timeoff.js') 
 const {malfunctions} = require('../schemas/malfunctions.js') 
 const {malfunction_types} = require('../schemas/malfunction_types.js') 
 const {repairs} = require('../schemas/repairs.js') 
@@ -47,6 +48,7 @@ const schemas = {
 	availability_profiles : availability_profiles,
 	availabilities : availabilities,
 	resource_timeoff : resource_timeoff,	
+	employee_timeoff : employee_timeoff,		
 	malfunctions : malfunctions,
 	malfunction_types : malfunction_types,
 	repairs : repairs,

@@ -27,7 +27,7 @@ const createUser = (user) => {
 const createToken = () => {
   return new Promise((resolve, reject) => {
     crypto.randomBytes(16, (err, data) => {
-      err ? reject(err) : resolve(data.toString('base64'))
+      err ? reject(err) : resolve(data.toString('hex'))
     })
   }).then(x => x)
 }
@@ -60,25 +60,25 @@ const updateUserToken = (token, user) => {
 }
 
 
-const findByToken = (token) => {
-  return db.one('select * from users where token = $1', [token])
+const findByToken =  async (token,user) => {
+  console.log("tttttoken:",token,user)
+  try { 
+    return await db.one('select * from users where token = $1 and username = $2;', [token,user])
+  }catch(err){
+    return null;
+  }
 }
 
 const getAuthority = () => {return {status: 'ok', type:'account'}}
 
-const authenticate = async (req,res,next) => {
-  console.log('~~~~~~~~~~~~~',req.method,req.query)
+const authenticate = async (req,res) => {
+  console.log('~~~~~~~~~~~~~1',req.method,req.query)
   const Utoken = (req.method == 'GET' ? req.query.token : req.body.token)
   const userName = (req.method == 'GET' ? req.query.user : req.body.user)
-    console.log('~~~~~~~~~~~~~',Utoken,userName)
-  const auth = await findByToken(Utoken)
-    .then((user) => {
-      console.log("user",user,user.username == userName)
-      return (user.username == userName) 
-  }).catch((err) => false)
-console.log("user auth:",auth)    
-  if (auth) return next(req,res)
-  else return auth;  
+  console.log('~~~~~~~~~~~~~2',Utoken,userName)
+  const auth = await findByToken(Utoken,userName)
+  console.log("user auth3:",auth,auth ? true : false)    
+  return auth ? true : false;  
 }
 
 const authenticate_old = (userReq) => {
@@ -121,7 +121,10 @@ const signin = (request, response) => {
       return checkPassword(userReq.password, foundUser)
     })
     .then((res) => createToken())
-    .then(token => updateUserToken(token, user))
+    .then(token => {
+      user.token = token
+      return updateUserToken(token, user)
+    })
     .then(x => getAuthority(user.id))
     .then((auth) => {
       user = {...user, ...auth , name: user.username}
