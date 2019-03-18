@@ -82,7 +82,7 @@ const fetchByName = (request, response, entity) => {
 
   	return db.one(schemas[entity].sql.single
 				, [param.name,param.lang]
-				).then((emp) => response.status(201).json({ emp }))
+				).then((emp) => response.status(200).json({ emp }))
  				 .catch((err) => {
       				response.status(401).json(user)
       				console.error(err)
@@ -96,7 +96,7 @@ const fetchTags = async(request, response) =>{
 
 	try{
 		const ret =  await db.any(sql).then(x=>x)	
-		response.status(201).json({main:ret})
+		response.status(200).json({main:ret})
 	}catch(e){
 		console.log(e)
 	}
@@ -107,7 +107,7 @@ const fetchRoutes = async(request, response) =>{
 
 	try{
 		const ret =  await db.any(sql).then(x=>x)	
-		response.status(201).json({main:ret})
+		response.status(200).json({main:ret})
 	}catch(e){
 		console.log(e)
 	}
@@ -119,7 +119,7 @@ const fetchNotifications = async(request, response) =>{
 				 where read is not true;`
 	try{
 		const ret =  await db.any(sql).then(x=>x)	
-		response.status(201).json(ret)
+		response.status(200).json(ret)
 	}catch(e){
 		console.log(e)
 	}
@@ -144,7 +144,7 @@ const fetch = async (request, response, entity) => {
 		const sql = `${schemas[entity].sql.all} ${(zoom === '1' ? zoomSql  : filterSql)} ${(schemas[entity].sql.final || '')} limit 100;`
 		console.log("fetch sql:",sql,request.query)
 		const main = await db.any(sql,[lang || '1',name || '',parent || '0' ,user || '']).then(x=>x)
-		const type = !main[0] ? 201 : 201
+		const type = !main[0] ? 200 : 200
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
 		const chooserQueries = Object.values(schemas[entity].sql.choosers)	
 	    const chooserResaults = await Promise.all(chooserQueries.map(choose => db.any(choose,[request.query.lang])))
@@ -302,7 +302,7 @@ let params = {}
 											        console.log('ERROR:', error); 
 											    });
 
-		res.status(200).json(ret)
+		res.status(201).json(ret)
 	} catch(err) {
 		console.log("123:",err)
 		res.status(406).json({error: err})
@@ -374,7 +374,7 @@ const update = async (req, res, entity) => {
 											        console.log('ERROR:', error); 
 											    });
 
-		res.status(200).json(ret)
+		res.status(202).json(ret)
 		return
 	} catch(err) {
 		console.log(err)
@@ -415,7 +415,7 @@ let params = {}
 											    .then(data => {
 											        console.log(`Return from function - ${post_delete.function} : ${data[0]}`); 
 											    })	
-	res.status(200).json(ret)
+	res.status(205).json(ret)
 		return 
 	} catch(err) {
 		console.log("delete:",err)
@@ -429,7 +429,7 @@ const func = async (req, res, entity) => {
 	console.log("func:", funcName, keys,req.body)
 	try {
    	const ret  = await Promise.all(keys.map(key => db.func(`${funcName}_${entity}`, key)))
-		res.status(200).json(ret)
+		res.status(230).json(ret)
 		return 
 	} catch(err) {
 		console.log(err)
