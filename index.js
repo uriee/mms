@@ -1,6 +1,19 @@
 const express = require('express');
 const User = require('./models/User')
-const {fetch, fetchTags, update, insert, remove, fetchNotifications, fetchRoutes, runQuery, func} = require('./models/Schemas')
+const {
+  fetch,
+  update,
+  insert,
+  remove,
+  fetchNotifications,
+  fetchRoutes,
+  fetchTags,
+  fetchResources,
+  batchUpdate,
+  runQuery,
+  func,
+  runFunc
+} = require('./models/Schemas')
 const {fetchDashData} = require('./models/Dash')
 const { bugInsert } = require('./models/utils')
 const app = express();
@@ -56,11 +69,21 @@ app.post('/mymes/update', (req,res) => update(req,res,getEntity(req.body.entity)
 app.post('/mymes/insert', (req,res) => req.body.entity === 'user' ? User.signup(req,res) :  insert(req,res,getEntity(req.body.entity)))
 app.post('/mymes/func', (req,res) => func(req,res,getEntity(req.body.entity)))
 
-app.post('/mymes/updateroutes', (req,res) => {
-     res.status(201).json({main:2})
-   runQuery(`update routes set routes = '${req.body.routes}'`)
+app.post('/mymes/updateroutes', async (req,res) => {
+    try{
+      await runQuery(`update routes set routes = '${req.body.routes}'`)
+      res.status(201).json({main:2})
+    } catch(err) {
+      console.log(err)
+      res.status(406).json({error:err})
+    }
  })
 
+app.post('/mymes/updateResources', (req,res) => {
+    let {body} = req
+    body.table = 'resource_groups'    
+    batchUpdate(body,res)
+ })
 
 router.get('/fetch', async (req,res) => {
       const x= await User.authenticate(req,res) 
@@ -74,6 +97,7 @@ router.get('/fetch', async (req,res) => {
 
 router.get('/notifications', (req,res) => fetchNotifications(req, res))
 router.get('/tags', (req,res) => fetchTags(req, res, 'tags'))
+router.get('/resources', (req,res) => fetchResources(req, res))
 router.get('/routes', (req,res) => fetchRoutes(req, res))
 router.get('/dash', (req,res) => fetchDashData(req, res))
 
