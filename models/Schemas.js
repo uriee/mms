@@ -102,6 +102,40 @@ const fetchTags = async(request, response) =>{
 	}
 }
 
+const fetchResources = async(request, response) =>{
+	const DBToTree = (resources,barnches) => {
+	    let raw = resources //JSON.parse(string)
+	    let raw2 = [...raw]
+	    rg = raw.filter(x=> x.resource_ids)   
+		rg.map(ri => {
+			const children = raw.filter(r=> ri.resource_ids.includes(r.id))
+			const childrenRaw2 = raw2.filter(r=> ri.resource_ids.includes(r.id))
+			ri.children =  childrenRaw2.length > children.length ? childrenRaw2 : children
+			raw = raw.filter(r=> !ri.resource_ids.includes(r.id))
+			return ri
+		})
+
+	    return raw
+	} 
+
+
+	const sql = `select r.id,r.name as name,ap.name as ap_name,r.resource_ids,dragable , r.row_type 
+				from mymes.resources as r, mymes.availability_profiles as ap
+				where ap.id = r.availability_profile_id
+				and r.active is true;`
+	try{
+		const ret =  await db.any(sql).then(x=>x)	
+		branches = ret.filter(x=>x.resource_ids)
+		tree = DBToTree(ret)
+		dbroot = branches.filter(x=>ret[0].id)
+		console.log("dbroot",tree);
+		response.status(200).json({main:DBToTree(ret)})
+	}catch(e){
+		console.log(e)
+	}
+}
+
+
 const fetchRoutes = async(request, response) =>{
 	const sql = `select routes from routes`
 
@@ -438,6 +472,49 @@ const func = async (req, res, entity) => {
 
 }
 
+const runFunc = async (req, res, funcname) => {
+	let { params } = req.body
+	console.log("func:", funcName, keys,req.body)
+	try {
+   	const ret  = await db.func(funcName, params)
+		res.status(230).json(ret)
+		return 
+	} catch(err) {
+		console.log(err)
+		res.status(406).json({error:err})
+	}
+}
+
+/*
+** param : body => {table => table name,data => fields to update (must include id field)}
+*/
+const batchUpdate = async (body,res) => {
+	const sqls = body.data.map(r => (
+		{set : Object.keys(r)
+			.filter(x=> x != 'id')
+			.map(x=> ({set : x, to:r[x]}))
+			.reduce((o,e) => o + `${e.set} = ${Array.isArray(e.to) ? 'array['+e.to+']' : e.to},`,'')
+			.slice(0,-1),
+		 id: r.id}
+		 )
+	)
+	const table = body.table
+	const sql = sqls.reduce((o,r) => [...o,`UPDATE mymes.${table} set ${r.set} where id=${r.id};`] ,[])
+	db.tx(t => {
+        // this.ctx = transaction config + state context;
+        return t.batch(sql.map(r => t.none(r)));
+    })
+    .then(data => {
+        res.status(230).json(data)
+		return 
+    })
+    .catch(error => {
+        console.log('ERROR:', error);
+        res.status(406).json({error:err})
+    });
+    
+}
+
 module.exports = {
-  fetch, fetchRoutes, fetchTags,fetchByName, update, insert, remove, runQuery ,func, fetchNotifications
+  fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, insert, remove, runQuery ,runFunc, func, fetchNotifications
 }
