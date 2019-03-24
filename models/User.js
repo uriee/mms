@@ -79,7 +79,7 @@ const authenticate = async (req,res,next) => {
   const auth = Utoken && userName && await findByToken(Utoken,userName) ? true : false
   console.log("user auth3:",auth)    
   if (!auth)  {
-    res.status(403).json({err : 'Not Authorized'})
+    res.status(408).json({err : 'Not Authorized'})
     return auth 
   } else return next();  
 }
