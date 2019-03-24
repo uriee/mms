@@ -71,14 +71,17 @@ const findByToken =  async (token,user) => {
 
 const getAuthority = () => {return {status: 'ok', type:'account'}}
 
-const authenticate = async (req,res) => {
-  console.log('~~~~~~~~~~~~~1',req.method,req.query)
+const authenticate = async (req,res,next) => {
+  console.log('~~~~~~~~~~~~~1',req.method,req.query,req.body)
   const Utoken = (req.method == 'GET' ? req.query.token : req.body.token)
   const userName = (req.method == 'GET' ? req.query.user : req.body.user)
   console.log('~~~~~~~~~~~~~2',Utoken,userName)
-  const auth = await findByToken(Utoken,userName)
-  console.log("user auth3:",auth,auth ? true : false)    
-  return auth ? true : false;  
+  const auth = Utoken && userName && await findByToken(Utoken,userName) ? true : false
+  console.log("user auth3:",auth)    
+  if (!auth)  {
+    res.status(403).json({err : 'Not Authorized'})
+    return auth 
+  } else return next();  
 }
 
 const authenticate_old = (userReq) => {
