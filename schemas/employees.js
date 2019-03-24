@@ -11,17 +11,15 @@ const {languagesArray} = require('./schema_conf.js')
 exports.employees = {
 		sql: {
 			all: `select employees.id, employees.name , employees.active as active, employees_t.fname, employees_t.sname, 
-				dept.name as dept_name,ap.name as ap_name, usr.username as user_name, employees.tags,
+				ap.name as ap_name, usr.username as user_name, employees.tags, 
 				employees.id_n, employees.clock_n, employees.salary_n, employees.manager, employees.delivery_method ,employees.email, employees.phone
 				from mymes.employees as employees left join mymes.employees_t as employees_t on employees.id = employees_t.emp_id 
 				left join users as usr on usr.id = employees.user_id,
-				mymes.availability_profiles as ap, mymes.departments as dept
+				mymes.availability_profiles as ap 
 				where employees.availability_profile_id = ap.id
-				and employees.dept_id = dept.id
 				and employees_t.lang_id = $1`,				
 
 			choosers :{
-				departments: `select name from mymes.departments;`,
 				users: `select username as name from users where not exists(select 1 from mymes.employees where user_id = users.id);`,
 				availability_profiles: `select name from mymes.availability_profiles;`,
 			},
@@ -35,10 +33,6 @@ exports.employees = {
 				lang_id : {
 					value : 'lang_id'
 				},
-				dept_id: {
-					query : `select id from mymes.departments where name = $1;`,
-					 value : 'dept_name'
-					},
 				user_id: {
 					query : `select id from users where username = $1;`,
 					 value : 'user_name'
@@ -52,10 +46,6 @@ exports.employees = {
 			tables : {
 				employees :{
 					fields : [
-						{
-							field: 'dept_id',
-							fkey : 'dept_id'
-							},
 						{
 							field: 'user_id',
 							fkey : 'user_id'
@@ -111,7 +101,7 @@ exports.employees = {
 						{
 							field: 'phone',
 							variable : 'phone',							
-						},											
+						},
 						{
 							key: 'id'
 						}

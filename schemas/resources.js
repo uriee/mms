@@ -10,13 +10,11 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.resources = {
 		sql: {
-			all: `select resources.id, resources.name , resources.active as active, resources.row_type as type, dept.name as dept_name, ap.name as ap_name
-				from mymes.resources as resources , mymes.availability_profiles as ap, mymes.departments as dept
-				where resources.availability_profile_id = ap.id
-				and resources.dept_id = dept.id` ,
+			all: `select resources.id, resources.name , resources.active as active, resources.row_type as type,  ap.name as ap_name , dragable 
+				from mymes.resources as resources , mymes.availability_profiles as ap
+				where resources.availability_profile_id = ap.id` ,
 
 			choosers :{
-				departments: `select name from mymes.departments;`,
 				availability_profiles: `select name from mymes.availability_profiles;`,
 			},
 
@@ -27,10 +25,6 @@ exports.resources = {
 
 			fkeys: {
 
-				dept_id: {
-					query : `select id from mymes.departments where name = $1;`,
-					 value : 'dept_name'
-					},
 				availability_profile_id: {
 					query : `select id from mymes.availability_profiles where name = $1;`,
 					 value : 'ap_name'
@@ -40,13 +34,6 @@ exports.resources = {
 			tables : {
 				resources :{
 					fields : [
-						{
-							field: 'dept_id',
-							fkey : 'dept_id',
-							table: 'dept',
-							filterField : 'name',
-							filterValue: 'dept_name',								
-						},
 						{
 							field: 'availability_profile_id',
 							fkey : 'availability_profile_id',
@@ -63,9 +50,13 @@ exports.resources = {
 							variable : 'active'
 						},
 						{
-							field: 'type',
+							field: 'row_type',
 							variable : 'type',
-						},						
+						},
+						{
+							field: 'dragable',
+							variable : 'dragable',
+						},
 						{
 							key: 'id'
 						}

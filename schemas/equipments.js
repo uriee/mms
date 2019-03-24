@@ -10,16 +10,14 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.equipments = {
 		sql: {
-			all: `select equipments.id, equipments.name , equipments.active as active, equipments_t.description, dept.name as dept_name, 
+			all: `select equipments.id, equipments.name , equipments.active as active, equipments_t.description,  
 			ap.name as ap_name, equipments.mac_address ,equipments.tags, equipments.serial, equipments.equipment_type ,equipments.calibrated ,equipments.last_calibration 
 				from mymes.equipments as equipments left join mymes.equipments_t as equipments_t on equipments.id = equipments_t.equipment_id ,
-				mymes.availability_profiles as ap, mymes.departments as dept
+				mymes.availability_profiles as ap
 				where equipments.availability_profile_id = ap.id
-				and equipments.dept_id = dept.id
 				and equipments_t.lang_id = $1`,				
 
 			choosers :{
-				departments: `select name from mymes.departments;`,
 				availability_profiles: `select name from mymes.availability_profiles;`,
 			},
 
@@ -32,10 +30,6 @@ exports.equipments = {
 				lang_id : {
 					value : 'lang_id'
 				},
-				dept_id: {
-					query : `select id from mymes.departments where name = $1;`,
-					 value : 'dept_name'
-				},
 				availability_profile_id: {
 					query : `select id from mymes.availability_profiles where name = $1;`,
 					 value : 'ap_name'
@@ -45,13 +39,6 @@ exports.equipments = {
 			tables : {
 				equipments :{
 					fields : [
-						{
-							field: 'dept_id',
-							fkey : 'dept_id',
-							table: 'dept',
-							filterField : 'name',
-							filterValue: 'dept_name',								
-						},
 						{
 							field: 'availability_profile_id',
 							fkey : 'availability_profile_id',
