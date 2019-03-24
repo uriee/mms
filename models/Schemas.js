@@ -218,7 +218,6 @@ const getFkeys = async (fkeys,params) => {
 				query.value.map(value =>  Array.isArray(params[value]) ? params[value].toString() :	params[value]) :
 				Array.isArray(params[query.value]) ? params[query.value].toString() :[params[query.value]]
 
-			console.log("**********",query.query, parameters)
 			var res = query.hasOwnProperty('query') ?
 						await db.any(query.query, parameters).then(x => Array.isArray(x)? x.map(x=> x.id) : x.id) :
 					    params[query.value]
@@ -243,7 +242,6 @@ const getFkeys = async (fkeys,params) => {
 const insert = async (req, res, entity) => {
 let params = {}
 	Object.keys(req.body).forEach(x=> params[x] = typeof req.body[x] === 'string' ?  req.body[x].replace(/'/g,"") : req.body[x]) //Protection againt sql injection
-	console.log("___---__-:",params)
 	Object.keys(params).forEach(x => {
 		params[x] = Array.isArray(params[x]) ? (params[x].length === 1 ? `{${params[x][0]}}` : `{${params[x]}}`) : params[x]
 	})
@@ -268,13 +266,10 @@ let params = {}
 	try{
 		const keys = await getFkeys(schema.fkeys,params)
 	    const tables = Object.keys(schema.tables)
-	console.log('===========3:',keys,params)    
-
 		/*Check to see if all required fields has value*/
 		const required = tables.reduce(
 			(ret,table) => ret + schema.tables[table].fields.filter(field => field.required).reduce(
 				(o,field)=>{
-				console.log("_-_:",o,field,params[field.field]);
 				return o + (params[field.field] ? 1 : 0)} , 0) 	,0
 			) || 1
 		if(!required) throw new Error('There are some required fields with no value!');
@@ -287,11 +282,11 @@ let params = {}
 					.map(x => {
 
 						params[x.variable] = x.func ? x.func(params[x.variable]) : params[x.variable] /* format  the value with the formating function from schema*/
-
+						console.log('---',x)	
 						return x.hasOwnProperty('value') ? 
 						`'${x.value}'` :
 						x.hasOwnProperty('fkey') ?
-						(Array.isArray(keys[x.fkey]) && keys[x.fkey].length > 1 ? `'{${keys[x.fkey]}}'` : keys[x.fkey]) :
+						(Array.isArray(keys[x.fkey]) && (keys[x.fkey].length > 1 || x.field ===  'resource_ids') ? `'{${keys[x.fkey]}}'` : keys[x.fkey]) :
 						`'${params[x.variable]}'${x.conv ? x.conv: ''}`
 					})
 		let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tables[0]}(${fields}) values(${values}) returning id;`
@@ -310,15 +305,13 @@ let params = {}
 											 	 keys[x.fkey] : `'${params[x.variable+(val === params['lang_id'] || !params[x.variable] ? '' : '_t')]}'`
 											 )
 					let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`
-					console.log("insert query if",sql)
 					return db.one(sql).then(x => x)
 				}))
 
 			}
 			else {
 				let values = table.fields.filter(x => x.field).map(x =>  x.hasOwnProperty('fkey') ? keys[x.fkey] : `'${params[x.variable]}'`)
-				let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`
-				console.log("insert query else",sql)				
+				let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`		
 				let ret =  await db.one(sql).then(x => x)
 				return ret
 			}
@@ -326,7 +319,6 @@ let params = {}
 						// Execeute the Post-Insert Statement from the schema
 		const post_insert = schemas[entity].post_insert						
 		params.id = new_id
-		console.log('params:',params)
 		const parameters = post_insert && post_insert.parameters.map(x => params[x])
 		const post = post_insert && parameters && db.func(post_insert.function, parameters)
 											    .then(data => {
@@ -338,7 +330,7 @@ let params = {}
 
 		res.status(201).json(ret)
 	} catch(err) {
-		console.log("123:",err)
+		console.log("Insert:",err)
 		res.status(406).json({error: err})
 	}
 }
@@ -359,7 +351,7 @@ const update = async (req, res, entity) => {
 		var fkeys = await getFkeys(fkSchema, params)
 		Object.keys(fkeys).forEach(key => {
 			value = fkeys[key]
-			fkeys[key] =  Array.isArray(value) && value.length === 1 ? value[0] : value
+			fkeys[key] =  key !== 'resource_ids' && Array.isArray(value) && value.length === 1 ? value[0] : value
 			})		
 
 		var allParams = Object.assign({},params,fkeys)
@@ -373,7 +365,6 @@ const update = async (req, res, entity) => {
 				  	const table = schema.tables[tn]
 				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field) && (allParams[field.field] || allParams[field.field] === false))
 				  							 .map(field => ({set : field.field, to: allParams[field.field], conv: field.conv }))
-					/*console.log('~~~********:',sets)*/
 				  	const wheres = table.fields.filter(field => params.hasOwnProperty(field.key))
 				  							   .map(field => ({where : field.field > '' ? field.field : field.key , equals: params[field.key]}))
 				  	const sqlSet = sets.reduce((old,set) => old + `"${set.set}" = '${set.to}'${set.conv ? set.conv: ''},`,'').slice(0,-1)
@@ -398,7 +389,6 @@ const update = async (req, res, entity) => {
 
 						// Execeute the Post-Insert Statement from the schema
 		const post_update = schemas[entity].post_update
-		console.log('params:',params)
 		const parameters = post_update && post_update.parameters.map(x => params[x])
 		const post = post_update && parameters && db.func(post_update.function, parameters)
 											    .then(data => {
@@ -424,7 +414,6 @@ let params = {}
 	const isPublic = !!schemas[entity].public	
 	let table = Object.keys(schema.tables)[0] /*all  translation tables are now deleted by DB constarint */
 	const key = schema.tables[table].fields.filter(x =>  x.key)[0].key
-	console.log("ooooo:",key)
 	const {pre_delete, post_delete} = schemas[entity]
 
 	/* cascading delete is preformed by DB foreign keys constraints*
@@ -437,7 +426,6 @@ let params = {}
 														,[])
 
 	try {
-   	console.log("Param:",params)
 	const pre = pre_delete && pre_delete.function && params.keys && await db.func(pre_delete.function, [params.keys])
 											    .then(data => {
 											        console.log(`Return from function - ${pre_delete.function} : ${data[0]}`); 
