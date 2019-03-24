@@ -86,12 +86,13 @@ app.post('/mymes/updateResources', (req,res) => {
  })
 
 router.get('/fetch', async (req,res) => {
+
       const x= await User.authenticate(req,res) 
-      console.log(':1234567890:',x)
+      console.log("in fetch",x)      
     if (x) {
       fetch(req,res,getEntity(req.query.entity))
     } else {
-      res.status(403)
+      res.status(408)
     }
   }) 
 
