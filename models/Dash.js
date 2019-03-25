@@ -77,7 +77,6 @@ const prod_funcs = [
 const fetchDashData2 = async (req,res) => {
   const param = req.query || req.body
   const func = funcs[param.func] 
-  console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',param)
   try {
         const data = await func(param)
         res.status(201).json(data)
@@ -94,7 +93,7 @@ const fetchDashData = async (req,res) => {
         const data = await Promise.all(prod_funcs.map(async (f) => await f.func(param)))
         prod_funcs.forEach((x,i)=> ret[x.name] = data[i])
         console.log(data,ret)        
-        res.status(201).json(ret)
+        res.status(200).json({data :ret})
       }catch(err){
               res.status(401).json()
               console.error(err)

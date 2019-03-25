@@ -99,7 +99,7 @@ router.get('/fetch', async (req,res) => {
 */
 router.get('/notifications', (req,res) => fetchNotifications(req, res))
 router.get('/routes', (req,res) => fetchRoutes(req, res))
-router.get('/dash', (req,res) => fetchDashData(req, res))
+router.get('/dash', (req,res) => User.authenticate(req,res,()=>fetchDashData(req, res)))
 
 app.post('/mymes/bug', (req,res) => bugInsert(req,res))
 
