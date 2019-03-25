@@ -118,13 +118,13 @@ const fetchResources = async(request, response) =>{
 	    return raw
 	} 
 
-
-	const sql = `select r.id,r.name as name,ap.name as ap_name,r.resource_ids,dragable , r.row_type 
-				from mymes.resources as r, mymes.availability_profiles as ap
+	const sql = `select r.id,r.name as name,ap.name as ap_name,r.resource_ids,dragable , r.row_type, e.sname || ' ' || e.fname as sname
+				from mymes.resources as r left join mymes.employees_t e on e.emp_id = r.id and e.lang_id = 1
+				, mymes.availability_profiles as ap
 				where ap.id = r.availability_profile_id
 				and r.active is true;`
 	try{
-		const ret =  await db.any(sql).then(x=>x)	
+		const ret =  await db.any(sql).then(x=>x.map(x=> ({... x, name :  x.sname ? `${x.name}: ${x.sname}` : x.name})))	
 		branches = ret.filter(x=>x.resource_ids)
 		tree = DBToTree(ret)
 		dbroot = branches.filter(x=>ret[0].id)
