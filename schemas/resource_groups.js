@@ -22,7 +22,7 @@ exports.resource_groups = {
 
 			choosers :{
 				availability_profiles: `select name from mymes.availability_profiles;`,
-				resources: `select name from mymes.resources;`
+				resources: `select name,description from mymes.resources, mymes.resource_desc where resource_id = id;`
 			},
 
 		},
