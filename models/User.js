@@ -60,10 +60,10 @@ const updateUserToken = (token, user) => {
 }
 
 
-const findByToken =  async (token,user) => {
-  console.log("tttttoken:",token,user)
+const findByToken =  async (token,user,auth) => {
+  console.log("tttttoken:",token,user,auth)
   try { 
-    return await db.one('select * from users where token = $1 and username = $2;', [token,user])
+    return await db.one(`select * from users where token = $1 and username = $2 and "currentAuthority" = $3;`, [token,user,auth])
   }catch(err){
     return null;
   }
@@ -75,12 +75,14 @@ const authenticate = async (req,res,next) => {
   console.log('~~~~~~~~~~~~~1',req.method,req.query,req.body)
   const Utoken = (req.method == 'GET' ? req.query.token : req.body.token)
   const userName = (req.method == 'GET' ? req.query.user : req.body.user)
-  console.log('~~~~~~~~~~~~~2',Utoken,userName)
-  const auth = Utoken && userName && await findByToken(Utoken,userName) ? true : false
-  console.log("user auth3:",auth)    
-  if (!auth)  {
+  let auth = (req.method == 'GET' ? req.query.auth : req.body.auth)
+  auth = auth && auth.split('"')[1]  
+  console.log('~~~~~~~~~~~~~2',Utoken,userName,auth)
+  const isAuth = Utoken && userName && auth  && auth[0] && await findByToken(Utoken,userName,auth) ? true : false
+  console.log("user auth3:",isAuth)    
+  if (!isAuth)  {
     res.status(408).json({err : 'Not Authorized'})
-    return auth 
+    return isAuth
   } else return next();  
 }
 
