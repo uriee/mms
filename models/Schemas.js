@@ -68,7 +68,7 @@ const schemas = {
 	locations : locations,
 	work_report : work_report,
 	identifier : identifier,
-	preferences : preferences,
+	preferences : preferences
 }
 
 const fillTemplate = function(templateString, templateVars){
@@ -108,9 +108,8 @@ const fetchResources = async(request, response) =>{
 	    let raw2 = [...raw]
 	    rg = raw.filter(x=> x.resource_ids)   
 		rg.map(ri => {
-			const children = raw.filter(r=> ri.resource_ids.includes(r.id))
-			const childrenRaw2 = raw2.filter(r=> ri.resource_ids.includes(r.id))
-			ri.children =  childrenRaw2.length > children.length ? childrenRaw2 : children
+			//ri.children = raw2.filter(r=> ri.resource_ids.includes(r.id))
+			ri.children = ri.resource_ids.map(r => raw2.filter(res=> res.id === r)[0])
 			raw = raw.filter(r=> !ri.resource_ids.includes(r.id))
 			return ri
 		})
@@ -118,11 +117,18 @@ const fetchResources = async(request, response) =>{
 	    return raw
 	} 
 
-	const sql = `select r.id,r.name as name,ap.name as ap_name,r.resource_ids,dragable , r.row_type, e.sname || ' ' || e.fname as sname
+	const sql = `select r.id,r.name as name,ap.name as ap_name,r.resource_ids,r.dragable , r.row_type, e.sname || ' ' || e.fname as sname, manager
 				from mymes.resources as r left join mymes.employees_t e on e.emp_id = r.id and e.lang_id = 1
+				left join mymes.employees emp on emp.id = r.id 
 				, mymes.availability_profiles as ap
 				where ap.id = r.availability_profile_id
 				and r.active is true;`
+	const sql2 = `select r.id,r.name as name,ap.name as ap_name,r.resource_ids,dragable , r.row_type, des.description as sname
+				from mymes.resources as r ,mymes.availability_profiles as ap, mymes.resource_desc as des
+				where ap.id = r.availability_profile_id
+				and des.resource_id = r.id
+				and des.lang_id = 1
+				and r.active is true;`				
 	try{
 		const ret =  await db.any(sql).then(x=>x.map(x=> ({... x, name :  x.sname ? `${x.name}: ${x.sname}` : x.name})))	
 		branches = ret.filter(x=>x.resource_ids)
@@ -277,7 +283,6 @@ let params = {}
 		const maintable = schema.tables[tables[0]]
 		const insertFields = maintable.fields.filter(x => x.field && (x.value || keys[x.fkey]>'' ||params[x.variable]>''))
 		let fields = insertFields.map(x => x.field)
-
 		let values = insertFields
 					.map(x => {
 

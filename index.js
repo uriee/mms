@@ -31,7 +31,8 @@ const router = express.Router();
 
 app.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
-    res.header('Cache-Control', 'no-cache');
+    //res.header('Cache-Control', 'no-cache');
+    res.header('Cache-Control', 'no-store, no-cache, must-revalidate, private') ;
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     next();
 });
@@ -49,14 +50,6 @@ const entityDict = {
   'resourceGroup': 'resource_groups',
   'resource': 'resources',
   'availabilityProfile': 'availability_profiles',
-  'locations' : 'locations',
-  'kit' : 'kit',
-  'process' : 'process',
-  'proc_act' : 'proc_act',
-  'serial_act' : 'serial_act',
-  'work_report' : 'work_report', 
-  'identifier ' : 'identifier',
-  'preferences' : 'preferences'  
 }
 const getEntity = (entity) => entityDict[entity] || entity
 
@@ -115,5 +108,6 @@ router.get('/test', function(req, res) {
 });
 
 app.use('/mymes', router);
+
 app.listen(port);
 console.log('Magic happens on port ' + port);
