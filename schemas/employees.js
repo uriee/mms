@@ -12,9 +12,11 @@ exports.employees = {
 		sql: {
 			all: `select employees.id, employees.name , employees.active as active, employees_t.fname, employees_t.sname, 
 				ap.name as ap_name, usr.username as user_name, employees.tags, 
-				employees.id_n, employees.clock_n, employees.salary_n, employees.manager, employees.delivery_method ,employees.email, employees.phone
-				from mymes.employees as employees left join mymes.employees_t as employees_t on employees.id = employees_t.emp_id 
-				left join users as usr on usr.id = employees.user_id,
+				employees.id_n, employees.clock_n, employees.salary_n, pos.name as position_name, employees.delivery_method ,employees.email, employees.phone
+				from mymes.employees as employees
+				 left join mymes.employees_t as employees_t on employees.id = employees_t.emp_id 
+				 left join mymes.positions as pos on employees.position_id = pos.id 
+				 left join users as usr on usr.id = employees.user_id,
 				mymes.availability_profiles as ap 
 				where employees.availability_profile_id = ap.id
 				and employees_t.lang_id = $1`,				
@@ -22,6 +24,7 @@ exports.employees = {
 			choosers :{
 				users: `select username as name from users where not exists(select 1 from mymes.employees where user_id = users.id);`,
 				availability_profiles: `select name from mymes.availability_profiles;`,
+				positions: `select name from mymes.positions;`,				
 			},
 
 		},
@@ -40,7 +43,11 @@ exports.employees = {
 				availability_profile_id: {
 					query : `select id from mymes.availability_profiles where name = $1;`,
 					 value : 'ap_name'
-					}					
+					},
+				position_id: {
+					query : `select id from mymes.positions where name = $1;`,
+					 value : 'position_name'
+					}										
 			},
 
 			tables : {
@@ -49,7 +56,11 @@ exports.employees = {
 						{
 							field: 'user_id',
 							fkey : 'user_id'
-							},
+						},
+						{
+							field: 'position_id',
+							fkey : 'position_id'
+						},						
 						{
 							field: 'availability_profile_id',
 							table: 'ap',
@@ -90,10 +101,6 @@ exports.employees = {
 							field: 'delivery_method',
 							variable : 'delivery_method'						
 						},
-						{
-							field: 'manager',
-							variable : 'manager',							
-						},	
 						{
 							field: 'email',
 							variable : 'email'						

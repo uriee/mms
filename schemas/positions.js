@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.positions = {
 		sql: {
-			all: `select positions.id, positions.name, positions.tags, positions_t.description, positions.hr, positions.qa
+			all: `select positions.id, positions.name, positions.tags, positions_t.description, positions.hr, positions.qa, positions.manager
 					from mymes.positions as positions left join mymes.positions_t as positions_t on positions.id = positions_t.position_id 
 					where positions_t.lang_id = $1 `,					
 
@@ -43,7 +43,11 @@ exports.positions = {
 						{
 							field: 'qa',
 							variable : 'qa'
-						},						
+						},	
+						{
+							field: 'manager',
+							variable : 'manager'
+						},											
 						{
 							field: 'row_type',
 							variable : 'row_type',
