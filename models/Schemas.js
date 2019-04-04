@@ -119,9 +119,11 @@ const fetchResources = async(request, response) =>{
 	    return raw
 	} 
 
-	const sql = `select r.id,r.name as name,ap.name as ap_name,r.resource_ids,r.dragable , r.row_type, e.sname || ' ' || e.fname as sname, manager
-				from mymes.resources as r left join mymes.employees_t e on e.emp_id = r.id and e.lang_id = 1
+	const sql = `select r.id,r.name as name,ap.name as ap_name,r.resource_ids,r.dragable , r.row_type, e.sname || ' ' || e.fname as sname ,pos.manager as manager ,pos.name as position
+				from mymes.resources as r
+				left join mymes.employees_t e on e.emp_id = r.id and e.lang_id = 1
 				left join mymes.employees emp on emp.id = r.id 
+				left join mymes.positions pos on pos.id = emp.position_id 
 				, mymes.availability_profiles as ap
 				where ap.id = r.availability_profile_id
 				and r.active is true;`
