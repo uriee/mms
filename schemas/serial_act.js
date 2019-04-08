@@ -35,6 +35,9 @@ exports.serial_act = {
 				},
 				serial_id: {
 					value : 'parent'
+				},
+				type:{
+					value:'type'
 				}
 			},
 

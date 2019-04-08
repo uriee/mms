@@ -48,6 +48,8 @@ const entityDict = {
   'resourceGroup': 'resource_groups',
   'resource': 'resources',
   'availabilityProfile': 'availability_profiles',
+  'process_act_resources' : 'act_resources',
+  'serial_act_resources' : 'act_resources',  
 }
 const getEntity = (entity) => entityDict[entity] || entity
 

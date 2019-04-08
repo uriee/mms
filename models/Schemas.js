@@ -8,6 +8,7 @@ const {serials} = require('../schemas/serials.js')
 const {serial_statuses} = require('../schemas/serial_statuses.js') 
 const {part_status} = require('../schemas/part_status.js') 
 const {actions} = require('../schemas/actions.js') 
+const {act_resources} = require('../schemas/act_resources.js') 
 const {positions} = require('../schemas/positions.js') 
 const {work_report} = require('../schemas/work_report.js') 
 const {process} = require('../schemas/process.js') 
@@ -59,6 +60,7 @@ const schemas = {
 	serials : serials, 
 	serial_statuses : serial_statuses,
 	part_status : part_status,	
+	act_resources: act_resources, 	
 	actions : actions,
 	positions : positions,	
 	process : process,
@@ -188,7 +190,6 @@ const fetch = async (request, response, entity) => {
 		const sql = `${schemas[entity].sql.all} ${(zoom === '1' ? zoomSql  : filterSql)} ${(schemas[entity].sql.final || '')} limit 100;`
 		console.log("fetch sql:",sql,request.query)
 		const main = await db.any(sql,[lang || '1',name || '',parent || '0' ,user || '']).then(x=>x)
-		const type = !main[0] ? 200 : 200
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
 		const chooserQueries = Object.values(schemas[entity].sql.choosers)	
 	    const chooserResaults = await Promise.all(chooserQueries.map(choose => db.any(choose,[request.query.lang])))
@@ -198,7 +199,7 @@ const fetch = async (request, response, entity) => {
 	    	main : main,
 	    	choosers: choosers
 	    	}
-	    response.status(type).json(ret)
+	    response.status(200).json(ret)
 	    return ret
 		} catch(err) {
 			response.status(403).json(err)
@@ -291,7 +292,6 @@ let params = {}
 					.map(x => {
 
 						params[x.variable] = x.func ? x.func(params[x.variable]) : params[x.variable] /* format  the value with the formating function from schema*/
-						console.log('---',x)	
 						return x.hasOwnProperty('value') ? 
 						`'${x.value}'` :
 						x.hasOwnProperty('fkey') ?

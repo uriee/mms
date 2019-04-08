@@ -25,6 +25,11 @@ exports.proc_act = {
 
 		},
 
+		post_insert: {
+			function: 'cpy_resources_act2proc',
+			parameters: ['id','act_name']
+		},
+
 		schema: {
 			pkey: 'process_id' ,
 
