@@ -12,9 +12,10 @@
 exports.work_report = {
 		sql: {
 			all: `select work_report.id, work_report.quant, users.username as username , work_report.sig_date, work_report.sig_user, sa.balance as maxq ,
-					serial.name as serialname, action.name as actname ,concat(serial.name,':',action.name,'-',work_report.quant) as name
-					from mymes.work_report as work_report , mymes.serials as serial, mymes.actions as action, users, mymes.serial_act as sa
+					serial.name as serialname, action.name as actname ,resources.name as resourcename, concat(serial.name,':',action.name,'-',work_report.quant) as name
+					from mymes.work_report as work_report , mymes.resources as resources, mymes.serials as serial, mymes.actions as action, users, mymes.serial_act as sa
 					where serial.id = work_report.serial_id 
+					and resources.id = work_report.resource_id
 					and users.id = work_report.sig_user
 					and action.id = work_report.act_id 
 					and sa.serial_id = work_report.serial_id 
@@ -23,11 +24,14 @@ exports.work_report = {
 					`,					
 			final: 'order by work_report.sig_date desc ',
 			choosers :{
-				seract : `select serial.name as serialname,act.name as actname
-						  from mymes.serials as serial,mymes.actions as act, mymes.serial_act as sa 
-						  where serial.id = sa.serial_id and act.id = sa.act_id 
-						  and serial.active=true and act.active=true 
-						  order by serial.name,sa.pos;`	,
+				resseract : `select r.name as resourcename,serial.name as serialname,act.name as actname 
+							from mymes.actions as act,
+							mymes.serials as serial , mymes.serial_act as seract
+							left join mymes.act_resources as ar on (ar.act_id = seract.id and type = 3)
+							left join mymes.resources as r on r.id = ar.resource_id 
+							where serial.id = seract.serial_id and act.id = seract.act_id 
+							and serial.active=true and act.active=true 
+							order by serial.name,seract.pos;`	,
 				serial: `select name from mymes.serials where active=true order by name;`,
 				act: `select name from mymes.actions where active=true order by name;`,
 			},
@@ -59,6 +63,10 @@ exports.work_report = {
 					query : `select id from mymes.actions where name = $1;`,
 					 value : 'actname'
 				},
+				resource_id: {
+					query : `select id from mymes.resources where name = $1;`,
+					 value : 'resourcename'
+				},				
 				sig_user: {
 					query : `select id from users where username = $1;`,
 					 value : 'sig_user'
@@ -71,7 +79,8 @@ exports.work_report = {
 						{
 							field: 'quant',
 							variable : 'quant'
-						},						
+						},
+
 						{
 							field: 'act_id',
 							fkey : 'act_id',
@@ -79,6 +88,13 @@ exports.work_report = {
 							filterField : 'name',
 							filterValue: 'actname',								
 						},
+						{
+							field: 'resource_id',
+							fkey : 'resource_id',
+							table: 'resources',
+							filterField : 'name',
+							filterValue: 'resourcename',								
+						},						
 						{
 							field: 'serial_id',
 							fkey : 'serial_id'
