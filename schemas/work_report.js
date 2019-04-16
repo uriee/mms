@@ -27,10 +27,12 @@ exports.work_report = {
 				resseract : `select r.name as resourcename,serial.name as serialname,act.name as actname 
 							from mymes.actions as act,
 							mymes.serials as serial , mymes.serial_act as seract
-							left join mymes.act_resources as ar on (ar.act_id = seract.id and type = 3)
-							left join mymes.resources as r on r.id = ar.resource_id 
+							join mymes.act_resources as ar on (ar.act_id = seract.id and type = 3)
+							join mymes.resources as r on r.id = ar.resource_id 
 							where serial.id = seract.serial_id and act.id = seract.act_id 
-							and serial.active=true and act.active=true 
+							and serial.active=true and act.active=true
+							and r.id in (select resource from user_parent_resources($2))
+							and seract.balance > 0 
 							order by serial.name,seract.pos;`	,
 				serial: `select name from mymes.serials where active=true order by name;`,
 				act: `select name from mymes.actions where active=true order by name;`,

@@ -192,7 +192,7 @@ const fetch = async (request, response, entity) => {
 		const main = await db.any(sql,[lang || '1',name || '',parent || '0' ,user || '']).then(x=>x)
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
 		const chooserQueries = Object.values(schemas[entity].sql.choosers)	
-	    const chooserResaults = await Promise.all(chooserQueries.map(choose => db.any(choose,[request.query.lang])))
+	    const chooserResaults = await Promise.all(chooserQueries.map(choose => db.any(choose,[request.query.lang , request.query.user])))
 	    const choosers = {}
 	    chooserId.map((ch,i) => { choosers[ch] = chooserResaults[i] }) 
 	    const ret = {
