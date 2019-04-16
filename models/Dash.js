@@ -65,16 +65,22 @@ const work_report_products = (param) => {
     ,[fromdate,todate,interval || 'day',(interval ? inter : '1 day')])
 }
 
+const work_report_placements_by_parent_resource = (param) => {
+  const {fromdate,todate,interval,user} = param
+  const inter = `1 ${interval}`
+  return db.any(
+    `select r.name,d as x, sum(wr.quant) as y
+      from generate_series( $1, date $2 + interval '1 day - 1 minute', interval $4) as d
+      left join mymes.work_report wr on date_trunc($3, wr.sig_date) = d
+      left join mymes.serials wo on wo.id = wr.serial_id
+      left join mymes.resources r on r.id = wr.resource_id and r.id in (select resource from user_resources_by_parent($5))
+      left join mymes.locations l  on l.part_id = wo.part_id and l.act_id = wr.act_id
+      group by r.name,d
+      order by d`
+    ,[fromdate,todate,interval || 'day',(interval ? inter : '1 day'),user])
+}
 
-const prod_funcs = [
-  {name:  'wo_percent_total' , func: wo_percent_total},
-  {name:'serial_total' ,func: serial_total},
-  {name : 'work_report_placements', func :  work_report_placements},
-  {name : 'work_report_products' ,func : work_report_products},
-  {name : 'serial_stats' ,func : serial_stats}  
-]
-
-const fetchDashData2 = async (req,res) => {
+/*const fetchDashData2 = async (req,res) => {
   const param = req.query || req.body
   const func = funcs[param.func] 
   try {
@@ -84,10 +90,20 @@ const fetchDashData2 = async (req,res) => {
               res.status(401).json()
               console.error(err)
       }
-}
+}*/
+
+const prod_funcs = [
+  {name:  'wo_percent_total' , func: wo_percent_total},
+  {name:'serial_total' ,func: serial_total},
+  {name : 'work_report_placements', func :  work_report_placements},
+  {name : 'work_report_placements_by_parent_resource', func :  work_report_placements_by_parent_resource, multi : 'resource'}, 
+  {name : 'work_report_products' ,func : work_report_products},
+  {name : 'serial_stats' ,func : serial_stats}  
+]
 
 const fetchDashData = async (req,res) => {
   const param = req.query || req.body
+  console.log('----------------',param)
   let ret = {funcs : prod_funcs.map(x => x.name)}
   try {
         const data = await Promise.all(prod_funcs.map(async (f) => await f.func(param)))
