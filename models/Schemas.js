@@ -482,9 +482,30 @@ const runFunc = async (req, res, funcname) => {
 	}
 }
 
-/*
-** param : body => {table => table name,data => fields to update (must include id field)}
-*/
+/***
+* @param : body => {table => table name,data => data rows to insert}
+****/
+const batchInsert = async (body,res) => {
+	const fields = Object.keys(body.data[0])
+	const rows = body.data.map(row => `(${
+		Object.values(row).reduce((o,val) =>  `${o},'${val}'`,'').slice(1)
+	})`).slice(0,-1)
+
+	const sql = `insert into mymes.${body.schemaName}(${fields}) values ${rows};`
+	console.log('SSQQLL:',sql)	
+	try{
+		const ret = await db.any(sql).then(x=>x)	
+		res.status(200).json({main:ret})
+	}catch(e){
+		console.log(e)
+		res.status(406).json({error:e})
+	}	
+}
+
+
+/***
+* @param : body => {table => table name,data => fields to update (must include id field)}
+****/
 const batchUpdate = async (body,res) => {
 	const sqls = body.data.map(r => (
 		{set : Object.keys(r)
@@ -513,5 +534,5 @@ const batchUpdate = async (body,res) => {
 }
 
 module.exports = {
-  fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, insert, remove, runQuery ,runFunc, func, fetchNotifications
+  fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, batchInsert, insert, remove, runQuery ,runFunc, func, fetchNotifications
 }

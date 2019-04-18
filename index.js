@@ -10,6 +10,7 @@ const {
   fetchTags,
   fetchResources,
   batchUpdate,
+  batchInsert,
   runQuery,
   func,
   runFunc
@@ -77,6 +78,13 @@ app.post('/mymes/updateResources', (req,res) => {
     body.table = 'resource_groups'    
     batchUpdate(body,res)
  })
+
+const importData = (req,res) => {
+  console.log("IMPORTDATA:",req.body)
+  batchInsert(req.body,res)
+}
+app.post('/mymes/importdata', (req,res) => importData(req,res))
+
 
 router.get('/fetch', async (req,res) => await User.authenticate(req,res,() => fetch(req,res,getEntity(req.query.entity)))) 
 router.get('/tags', async (req,res) => await User.authenticate(req,res,() => fetchTags(req, res, 'tags'))) 
