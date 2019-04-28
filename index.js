@@ -50,7 +50,7 @@ const entityDict = {
   'resource': 'resources',
   'availabilityProfile': 'availability_profiles',
   'process_act_resources' : 'act_resources',
-  'serial_act_resources' : 'act_resources',  
+  'serial_act_resources' : 'act_resources',
 }
 const getEntity = (entity) => entityDict[entity] || entity
 
@@ -81,7 +81,7 @@ app.post('/mymes/updateResources', (req,res) => {
 
 const importData = (req,res) => {
   console.log("IMPORTDATA:",req.body)
-  batchInsert(req.body,res)
+  batchInsert(req,res,getEntity(req.body.entity))
 }
 app.post('/mymes/importdata', (req,res) => importData(req,res))
 

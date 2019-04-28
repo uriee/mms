@@ -249,17 +249,70 @@ const getFkeys = async (fkeys,params) => {
 }
 
 
+const InsertToTables = async (params,schema) => {
+	const keys = await getFkeys(schema.fkeys,params)
+    const tables = Object.keys(schema.tables)
+    const isPublic = !!schema.public
+	const id  = schema.pkey
+	var new_id = 0    
+	/*Check to see if all required fields has value*/
+	const required = tables.reduce(
+		(ret,table) => ret + schema.tables[table].fields.filter(field => field.required).reduce(
+			(o,field)=>{
+			return o + (params[field.field] ? 1 : 0)} , 0) 	,0
+		) || 1
+	if(!required) throw new Error('There are some required fields with no value!');
+	
+	const maintable = schema.tables[tables[0]]
+	const insertFields = maintable.fields.filter(x => x.field && (x.value || keys[x.fkey]>'' ||params[x.variable]>''))
+	let fields = insertFields.map(x => x.field)
+	let values = insertFields
+				.map(x => {
+
+					params[x.variable] = x.func ? x.func(params[x.variable]) : params[x.variable] /* format  the value with the formating function from schema*/
+					return x.hasOwnProperty('value') ? 
+					`'${x.value}'` :
+					x.hasOwnProperty('fkey') ?
+					(Array.isArray(keys[x.fkey]) && (keys[x.fkey].length > 1 || x.field ===  'resource_ids') ? `'{${keys[x.fkey]}}'` : keys[x.fkey]) :
+					`'${params[x.variable]}'${x.conv ? x.conv: ''}`
+				})
+	let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tables[0]}(${fields}) values(${values}) returning id;`
+	console.log("insert query maintable",sql)
+	new_id = keys[id] = await db.one(sql).then(x => x.id)
+	tables.shift()
+	const ret  = await Promise.all(tables.map(async (tablename)=>{
+		const table = schema.tables[tablename]
+		const fields = table.fields.filter(x => x.field).map(x => x.field)
+		if (table.hasOwnProperty('fill')) {
+			let field = table.fill.field
+			return await Promise.all(table.fill.values.map(val => {
+				let values = table.fields.filter(x => x.field )
+										 .map(x =>  x.field === field ?
+										 	 val : x.hasOwnProperty('fkey') ?
+										 	 keys[x.fkey] : `'${params[x.variable+(val === params['lang_id'] || !params[x.variable] ? '' : '_t')]}'`
+										 )
+				let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`
+				return db.one(sql).then(x => x)
+			}))
+
+		}
+		else {
+			let values = table.fields.filter(x => x.field).map(x =>  x.hasOwnProperty('fkey') ? keys[x.fkey] : `'${params[x.variable]}'`)
+			let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`		
+			let ret =  await db.one(sql).then(x => x)
+			return ret
+		}
+	}))
+	return new_id	
+}
 
 const insert = async (req, res, entity) => {
-let params = {}
+	let params = {}
 	Object.keys(req.body).forEach(x=> params[x] = typeof req.body[x] === 'string' ?  req.body[x].replace(/'/g,"") : req.body[x]) //Protection againt sql injection
 	Object.keys(params).forEach(x => {
 		params[x] = Array.isArray(params[x]) ? (params[x].length === 1 ? `{${params[x][0]}}` : `{${params[x]}}`) : params[x]
 	})
 	const schema = schemas[entity].schema
-	const isPublic = !!schemas[entity].public
-	const id  = schema.pkey
-	var new_id = 0
 	const pre_insert = schemas[entity].pre_insert	
 
 	try{						
@@ -273,58 +326,10 @@ let params = {}
 			res.status(406).json({error: 'pre_insert : '+err})
 			return 0
 		}
-		
-	try{
-		const keys = await getFkeys(schema.fkeys,params)
-	    const tables = Object.keys(schema.tables)
-		/*Check to see if all required fields has value*/
-		const required = tables.reduce(
-			(ret,table) => ret + schema.tables[table].fields.filter(field => field.required).reduce(
-				(o,field)=>{
-				return o + (params[field.field] ? 1 : 0)} , 0) 	,0
-			) || 1
-		if(!required) throw new Error('There are some required fields with no value!');
-		
-		const maintable = schema.tables[tables[0]]
-		const insertFields = maintable.fields.filter(x => x.field && (x.value || keys[x.fkey]>'' ||params[x.variable]>''))
-		let fields = insertFields.map(x => x.field)
-		let values = insertFields
-					.map(x => {
 
-						params[x.variable] = x.func ? x.func(params[x.variable]) : params[x.variable] /* format  the value with the formating function from schema*/
-						return x.hasOwnProperty('value') ? 
-						`'${x.value}'` :
-						x.hasOwnProperty('fkey') ?
-						(Array.isArray(keys[x.fkey]) && (keys[x.fkey].length > 1 || x.field ===  'resource_ids') ? `'{${keys[x.fkey]}}'` : keys[x.fkey]) :
-						`'${params[x.variable]}'${x.conv ? x.conv: ''}`
-					})
-		let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tables[0]}(${fields}) values(${values}) returning id;`
-		console.log("insert query maintable",sql)
-		new_id = keys[id] = await db.one(sql).then(x => x.id)
-		tables.shift()
-		const ret  = await Promise.all(tables.map(async (tablename)=>{
-			const table = schema.tables[tablename]
-			const fields = table.fields.filter(x => x.field).map(x => x.field)
-			if (table.hasOwnProperty('fill')) {
-				let field = table.fill.field
-				return await Promise.all(table.fill.values.map(val => {
-					let values = table.fields.filter(x => x.field )
-											 .map(x =>  x.field === field ?
-											 	 val : x.hasOwnProperty('fkey') ?
-											 	 keys[x.fkey] : `'${params[x.variable+(val === params['lang_id'] || !params[x.variable] ? '' : '_t')]}'`
-											 )
-					let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`
-					return db.one(sql).then(x => x)
-				}))
-
-			}
-			else {
-				let values = table.fields.filter(x => x.field).map(x =>  x.hasOwnProperty('fkey') ? keys[x.fkey] : `'${params[x.variable]}'`)
-				let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`		
-				let ret =  await db.one(sql).then(x => x)
-				return ret
-			}
-		}))
+	try{											    
+		const ret = await InsertToTables(params,schema)
+		res.status(201).json(ret)
 						// Execeute the Post-Insert Statement from the schema
 		const post_insert = schemas[entity].post_insert						
 		params.id = new_id
@@ -336,8 +341,6 @@ let params = {}
 											    .catch(error => {
 											        console.log('ERROR:', error); 
 											    });
-
-		res.status(201).json(ret)
 	} catch(err) {
 		console.log("Insert:",err)
 		res.status(406).json({error: err})
@@ -485,15 +488,31 @@ const runFunc = async (req, res, funcname) => {
 /***
 * @param : body => {table => table name,data => data rows to insert}
 ****/
-const batchInsert = async (body,res) => {
-	const fields = Object.keys(body.data[0])
-	const rows = body.data.map(row => `(${
-		Object.values(row).reduce((o,val) =>  `${o},'${val}'`,'').slice(1)
-	})`).slice(0,-1)
+const batchInsert = async (req,res,entity) => {
+	console.log(entity,req.body)
+	const schema = schemas[entity].schema	
+	try {
 
-	const sql = `insert into mymes.${body.schemaName}(${fields}) values ${rows};`
-	console.log('SSQQLL:',sql)	
+		const ret = req.body.data.map(async row => {
+			let params = {}
+			Object.keys(row).forEach(x=> params[x] = typeof row[x] === 'string' ?  row[x].replace(/'"/g,"") : row[x]) //Protection againt sql injection
+			Object.keys(params).forEach(x => {
+				params[x] = Array.isArray(params[x]) ? (params[x].length === 1 ? `{${params[x][0]}}` : `{${params[x]}}`) : params[x]
+			})
+			return await InsertToTables(params,schema)
+		})
+		res.status(200).json({inserted:ret})
+	}catch(err){
+		console.log("Error in batchInsert on row",err)
+		res.status(406).json({error:err})
+	}	
+}
+/*
+const InsertImport = async (body,res) => {
 	try{
+		const rows = body.data.map(row => Insert()
+			Object.values(row).reduce((o,val) =>  `${o},'${val}'`,'').slice(1)
+		})`).slice(0,-1)		
 		const ret = await db.any(sql).then(x=>x)	
 		res.status(200).json({main:ret})
 	}catch(e){
@@ -501,7 +520,7 @@ const batchInsert = async (body,res) => {
 		res.status(406).json({error:e})
 	}	
 }
-
+*/
 
 /***
 * @param : body => {table => table name,data => fields to update (must include id field)}
