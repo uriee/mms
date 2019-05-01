@@ -11,7 +11,7 @@ const {languagesArray} = require('./schema_conf.js')
 exports.serials = {
 		sql: {
 			all: `select serials.id, serials.name, serials.quant, serials.tags, serials_t.description, serials.active, serials.end_date, 
-					concat(part.name,':',part.revision) as partname, process.name as procname, serial_statuses.name as status 
+					concat(part.name,':',part.revision) as partname, process.name as procname, serial_statuses.name as status ,extserial 
 					from mymes.serials as serials left join mymes.serials_t as serials_t on serials.id = serials_t.serial_id 
 					left join mymes.process as process on serials.process_id = process.id,
 					mymes.serial_statuses as serial_statuses, mymes.part as part 
@@ -95,6 +95,10 @@ exports.serials = {
 							field: 'end_date',
 							variable : 'end_date'
 						},	
+						{
+							field: 'extserial',
+							variable : 'extserial'
+						},						
 						{
 							field: 'row_type',
 							variable : 'row_type',

@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.serial_statuses = {
 		sql: {
-			all: `select serial_statuses.id, serial_statuses.name, serial_statuses.active, serial_statuses.tags, serial_statuses_t.description 
+			all: `select serial_statuses.id, serial_statuses.name, serial_statuses.active, serial_statuses.closed, serial_statuses.tags, serial_statuses_t.description 
 				  	from mymes.serial_statuses as serial_statuses left join mymes.serial_statuses_t as serial_statuses_t on serial_statuses.id = serial_statuses_t.serial_status_id
 					where serial_statuses_t.lang_id = $1 `,					
 
@@ -49,6 +49,10 @@ exports.serial_statuses = {
 							field: 'active',
 							variable : 'active'
 						},
+						{
+							field: 'closed',
+							variable : 'closed'
+						},						
 						{
 							key: 'id'
 						}
