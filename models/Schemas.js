@@ -328,8 +328,8 @@ const insert = async (req, res, entity) => {
 		}
 
 	try{											    
-		const ret = await InsertToTables(params,schema)
-		res.status(201).json(ret)
+		const new_id = await InsertToTables(params,schema)
+		res.status(201).json(new_id)
 						// Execeute the Post-Insert Statement from the schema
 		const post_insert = schemas[entity].post_insert						
 		params.id = new_id
@@ -495,7 +495,7 @@ const batchInsert = async (req,res,entity) => {
 
 		const ret = req.body.data.map(async row => {
 			let params = {}
-			Object.keys(row).forEach(x=> params[x] = typeof row[x] === 'string' ?  row[x].replace(/'"/g,"") : row[x]) //Protection againt sql injection
+			Object.keys(row).forEach(x=> params[x] = typeof row[x] === 'string' ?  row[x].replace(/'/g,"") : row[x]) //Protection againt sql injection
 			Object.keys(params).forEach(x => {
 				params[x] = Array.isArray(params[x]) ? (params[x].length === 1 ? `{${params[x][0]}}` : `{${params[x]}}`) : params[x]
 			})
