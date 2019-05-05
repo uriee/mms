@@ -184,7 +184,7 @@ const fetch = async (request, response, entity) => {
 							).filter(field => field.value)
 	
 	try {
-		const filterSql = filters.reduce((string, filter)=> string+` and UPPER(${filter.field}::text) like '%${filter.value.toString().toUpperCase()}%'` , '')
+		const filterSql = filters.reduce((string, filter)=> string+` and UPPER(${filter.field}::text) like '%${filter.value.toString().toUpperCase().replace(/\$/g,"%")}%'` , '')
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
 		const sql = `${schemas[entity].sql.all} ${(zoom === '1' ? zoomSql  : filterSql)} ${(schemas[entity].sql.final || '')} limit 100;`
