@@ -11,9 +11,11 @@ const {languagesArray} = require('./schema_conf.js')
 exports.serials = {
 		sql: {
 			all: `select serials.id, serials.name, serials.quant, serials.tags, serials_t.description, serials.active, serials.end_date, 
-					concat(part.name,':',part.revision) as partname, process.name as procname, serial_statuses.name as status ,extserial 
+					concat(part.name,':',part.revision) as partname, process.name as procname, serial_statuses.name as status,
+					serials.extserial ,parent.name as parent_serial_name
 					from mymes.serials as serials left join mymes.serials_t as serials_t on serials.id = serials_t.serial_id 
-					left join mymes.process as process on serials.process_id = process.id,
+					left join mymes.process as process on serials.process_id = process.id
+					left join mymes.serials as parent on parent.id = serials.parent_serial,
 					mymes.serial_statuses as serial_statuses, mymes.part as part 
 					where part.id = serials.part_id
 					and serial_statuses.id = serials.status
@@ -22,7 +24,8 @@ exports.serials = {
 			choosers :{	
 				status: `select name from mymes.serial_statuses;`,
 				part: `select concat(name,':',revision) as name from mymes.part where active=true order by name,revision;`,
-				process: `select name from mymes.process;`
+				process: `select name from mymes.process;`,
+				parent_serial: `select name from mymes.serials where active = True`
 			}
 
 		},
@@ -58,7 +61,11 @@ exports.serials = {
 				process_id: {
 					query : `select id from mymes.process where name = $1;`,
 					 value : 'procname'
-				}
+				},
+				parent_serial: {
+					query : `select id from mymes.serials where name = $1;`,
+					 value : 'parent_serial_name'
+				}				
 			},
 
 			tables : {
@@ -83,7 +90,11 @@ exports.serials = {
 						{
 							field: 'process_id',
 							fkey : 'process_id'
-						},						
+						},
+																		{
+							field: 'parent_serial',
+							fkey : 'parent_serial'
+						},
 						{
 							field: 'status',
 							fkey : 'status',
