@@ -13,12 +13,15 @@ const {
   batchInsert,
   runQuery,
   func,
-  runFunc
+  runFunc,
+  importSerial
 } = require('./models/Schemas')
 const {fetchDashData} = require('./models/Dash')
 const { bugInsert } = require('./models/utils')
 const app = express();
 const bodyParser = require('body-parser');
+app.use(bodyParser.json({limit: "50mb"})); // 
+app.use(bodyParser.urlencoded({limit: "50mb", extended: true, parameterLimit:50000}));
 const cors = require('cors');
 
 app.use(bodyParser.urlencoded({
@@ -79,25 +82,14 @@ app.post('/mymes/updateResources', (req,res) => {
     batchUpdate(body,res)
  })
 
-const importData = (req,res) => {
-  console.log("IMPORTDATA:",req.body)
-  batchInsert(req,res,getEntity(req.body.entity))
-}
-app.post('/mymes/importdata', (req,res) => importData(req,res))
+
+//app.post('/mymes/importdata', (req,res) => importData(req,res))
+app.post('/mymes/importdata', (req,res) => batchInsert(req,res,getEntity(req.body.entity)))
 
 
 router.get('/fetch', async (req,res) => await User.authenticate(req,res,() => fetch(req,res,getEntity(req.query.entity)))) 
 router.get('/tags', async (req,res) => await User.authenticate(req,res,() => fetchTags(req, res, 'tags'))) 
 router.get('/resources', async (req,res) => await User.authenticate(req,res,() => fetchResources(req, res))) 
-
-/*
-router.get('/fetch', async (req,res) => {
-      const x = await User.authenticate(req,res) 
-    if (x) {
-      fetch(req,res,getEntity(req.query.entity))
-    } 
-}) 
-*/
 router.get('/notifications', (req,res) => fetchNotifications(req, res))
 router.get('/routes', (req,res) => fetchRoutes(req, res))
 router.get('/dash', (req,res) => User.authenticate(req,res,()=>fetchDashData(req, res)))
@@ -115,6 +107,8 @@ router.get('/test', function(req, res) {
  User.test()
 });
 
+
+app.post('/mymes/importserial', (req,res) => importSerial(req,res))
 app.use('/mymes', router);
 
 app.listen(port);

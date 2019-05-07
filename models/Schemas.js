@@ -175,7 +175,8 @@ Populate the response data from DB with the requested data of a certain entity
 */
 const fetch = async (request, response, entity) => {
 	const {lang/*pageSize,currentPage*/,zoom,name,parent,user} = request.query
-	const tables = schemas[entity].schema.tables	
+	const tables = schemas[entity].schema.tables
+	const limit =  schemas[entity].limit || 100
 	const filters = flatten(	
 							Object.keys(tables)
 							.map(table=> tables[table].fields
@@ -187,7 +188,7 @@ const fetch = async (request, response, entity) => {
 		const filterSql = filters.reduce((string, filter)=> string+` and UPPER(${filter.field}::text) like '%${filter.value.toString().toUpperCase().replace(/\$/g,"%")}%'` , '')
 		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
-		const sql = `${schemas[entity].sql.all} ${(zoom === '1' ? zoomSql  : filterSql)} ${(schemas[entity].sql.final || '')} limit 100;`
+		const sql = `${schemas[entity].sql.all} ${(zoom === '1' ? zoomSql  : filterSql)} ${(schemas[entity].sql.final || '')} limit ${limit};`
 		console.log("fetch sql:",sql,request.query)
 		const main = await db.any(sql,[lang || '1',name || '',parent || '0' ,user || '']).then(x=>x)
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
@@ -303,10 +304,11 @@ const InsertToTables = async (params,schema) => {
 			return ret
 		}
 	}))
+
 	return new_id	
 }
 
-const insert = async (req, res, entity) => {
+const insert = async (req, res, entity , mute = false) => {
 	let params = {}
 	Object.keys(req.body).forEach(x=> params[x] = typeof req.body[x] === 'string' ?  req.body[x].replace(/'/g,"") : req.body[x]) //Protection againt sql injection
 	Object.keys(params).forEach(x => {
@@ -323,13 +325,13 @@ const insert = async (req, res, entity) => {
 											    })									    
 		}catch(err) {
 			console.log("pre_insert:",err)
-			res.status(406).json({error: 'pre_insert : '+err})
-			return 0
+			if (!mute) res.status(406).json({error: 'pre_insert : '+err})
+			throw new Error("PreInsert fault")
 		}
 
 	try{											    
 		const new_id = await InsertToTables(params,schema)
-		res.status(201).json(new_id)
+		if (!mute) res.status(201).json(new_id)
 						// Execeute the Post-Insert Statement from the schema
 		const post_insert = schemas[entity].post_insert						
 		params.id = new_id
@@ -340,10 +342,13 @@ const insert = async (req, res, entity) => {
 											    })
 											    .catch(error => {
 											        console.log('ERROR:', error); 
+											        throw new Error("PostInsert fault")
 											    });
+		return new_id											    
 	} catch(err) {
 		console.log("Insert:",err)
-		res.status(406).json({error: err})
+		if (!mute) res.status(406).json({error: err})
+		throw new Error("Insert fault :" + err.toString())
 	}
 }
 
@@ -490,10 +495,22 @@ const runFunc = async (req, res, funcname) => {
 ****/
 const batchInsert = async (req,res,entity) => {
 	console.log(entity,req.body)
-	const schema = schemas[entity].schema	
 	try {
+		const ret = await Promise.all(await batchInsert_(req.body.data,entity))
+		console.log('~~~~~~~~~~',ret)
+		res.status(200).json({inserted:ret})
+	}catch(err){
+		console.log("Error in batchInsert",err)
+		res.status(406).json({error:err})
+	}	
+}
 
-		const ret = req.body.data.map(async row => {
+const batchInsert_ = async (data,entity) => {
+	console.log('___-',data,entity)
+	const schema = schemas[entity].schema
+	var ret = null
+	try {
+		ret = await data.map(async row => {
 			let params = {}
 			Object.keys(row).forEach(x=> params[x] = typeof row[x] === 'string' ?  row[x].replace(/'/g,"") : row[x]) //Protection againt sql injection
 			Object.keys(params).forEach(x => {
@@ -501,26 +518,12 @@ const batchInsert = async (req,res,entity) => {
 			})
 			return await InsertToTables(params,schema)
 		})
-		res.status(200).json({inserted:ret})
+		return ret
 	}catch(err){
-		console.log("Error in batchInsert on row",err)
-		res.status(406).json({error:err})
-	}	
+		console.log("Error in batchInsert_",ret,err)
+		return 0
+	}
 }
-/*
-const InsertImport = async (body,res) => {
-	try{
-		const rows = body.data.map(row => Insert()
-			Object.values(row).reduce((o,val) =>  `${o},'${val}'`,'').slice(1)
-		})`).slice(0,-1)		
-		const ret = await db.any(sql).then(x=>x)	
-		res.status(200).json({main:ret})
-	}catch(e){
-		console.log(e)
-		res.status(406).json({error:e})
-	}	
-}
-*/
 
 /***
 * @param : body => {table => table name,data => fields to update (must include id field)}
@@ -552,6 +555,100 @@ const batchUpdate = async (body,res) => {
     
 }
 
+const importSerial = (req,res) => {
+	const part_schema = schemas['parts'].schema
+	const serial_schema = schemas['serials'].schema	
+ 	var data = {}
+  	try {
+    data = JSON.parse(req.body.data)
+ 	 }catch(e){
+    res.status(406).json({})
+  	}
+  	console.log("IMPORTDATA:",data)
+ 	data.map(async (serial) => {
+ 		var sql = `select id,part_id from mymes.serials where name = '${serial.SERIAL.SERIALNAME}';`
+ 		var serial_id,parent_id,process,part_id
+ 		try{
+	    	const xxx = await db.one(sql)  
+	    	serial_id = xxx.id
+	    	part_id = xxx.part_id
+
+	    }catch(e){ /*serial_id can be null*/ }	
+ 		try{
+	 		process = serial.SERIAL.PROCNAME ?  await db.one(`select id,name from mymes.process where erpproc = '${serial.SERIAL.PROCNAME}';`)  : null
+	    }catch(e){ /*prosecc_id can be null*/ }	 
+ 		try{
+	 	 	parent_id = serial.SERIAL.PARENT ? await db.one(`select id from mymes.serials where name = '${serial.SERIAL.PARENT}';`): null 
+	    }catch(e){ /*parent_serial_id can be null*/ }
+ 		try{
+ 			sql = `select id from mymes.part where name = '${serial.PART.PARTNAME}' and revision = '${serial.PART.REVISION}';`
+ 			console.log(sql,(await db.one(sql)).id)
+	 	 	part_id = !part_id && serial.PART.PARTNAME ? (await db.one(sql)).id : part_id 
+	    }catch(e){ /*parent_serial_id can be null*/ }	    
+
+	    const partAllreadyExists = part_id > 0 
+
+	    if(serial_id) {
+	    	console.log('all ready exists')
+			serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
+			const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,res,'kit')) : []	    	
+	    }
+	    else{
+	    	try {
+	    		if(!partAllreadyExists) {
+		    		try {
+				    	const partParams = {
+				    		name : serial.PART.PARTNAME,
+				    		active: true,
+				    		part_status : 'Production',
+				    		revision: serial.PART.REVISION,
+				    		doc_revision: serial.PART.DOCREV,
+				    		row_type : 'part',
+				    		description : serial.PART.PARTDES,
+				    		lang_id :  1
+				    	}
+						part_id = await InsertToTables(partParams,part_schema)
+					}catch(e){
+						console.log('part allready exists',e)
+					}
+				}
+	
+		    	const serialParams = {
+		    		name : serial.SERIAL.SERIALNAME,
+		    		quant : serial.SERIAL.SERIALQUANT,
+		    		active: true,
+		    		partname : serial.PART.PARTNAME+':'+serial.PART.REVISION,
+		    		status: 'Released',
+		    		procname : process.id ? process.name : '',
+		    		part_serial_name: parent_id ? serial.SERIAL.PARENT : '',
+		    		row_type : 'serial',
+		    		end_date : null, 
+		    		extserial: serial.SERIAL.SERIALNAME,
+		    		description : serial.SERIAL.SERIALDES,
+		    		lang_id :  1
+		    	}
+				serial_id = await insert({body :serialParams},res,'serials',mute = true)	
+						
+				if(!process.id) {
+					//inser seract
+				}
+				if(!partAllreadyExists){
+					serial.BOM = serial.BOM && serial.BOM.map(x => ({ lang_id: 1, partname : x.PARTNAME,	coef : x.COEF, parent : part_id}))
+					serial.LOC = serial.LOC && serial.LOC.map(x => ({ lang_id: 1, location : x.LOCATION, x :x.X, y: x.Y, z:x.Z,partname: x.PARTNAME,quant: x.QUANT, act_name :x.ACTNAME, parent : part_id}))
+					const bom = serial.BOM && serial.BOM.length ? await Promise.all( await batchInsert_(serial.BOM,'bom')) : []
+					const loc = serial.LOC && serial.LOC.length ? await Promise.all( await batchInsert_(serial.LOC,'locations')) : []		
+				}
+				serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
+				const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,'kit')) : []
+			}catch(e){
+				console.log('',e)
+			}	
+		}
+
+    })	
+  res.status(201).json({})
+}
+
 module.exports = {
-  fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, batchInsert, insert, remove, runQuery ,runFunc, func, fetchNotifications
+  fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, batchInsert, insert, remove, runQuery ,runFunc, func, fetchNotifications, importSerial
 }
