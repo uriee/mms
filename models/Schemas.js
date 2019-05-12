@@ -336,6 +336,7 @@ const insert = async (req, res, entity , mute = false) => {
 		const post_insert = schemas[entity].post_insert						
 		params.id = new_id
 		const parameters = post_insert && post_insert.parameters.map(x => params[x])
+		console.log("DEbug post_insert: ",entity, post_insert, parameters)
 		const post = post_insert && parameters && db.func(post_insert.function, parameters)
 											    .then(data => {
 											        console.log(`Return from function - ${post_insert.function} : ${data}`); 
@@ -494,10 +495,8 @@ const runFunc = async (req, res, funcname) => {
 * @param : body => {table => table name,data => data rows to insert}
 ****/
 const batchInsert = async (req,res,entity) => {
-	console.log(entity,req.body)
 	try {
 		const ret = await Promise.all(await batchInsert_(req.body.data,entity))
-		console.log('~~~~~~~~~~',ret)
 		res.status(200).json({inserted:ret})
 	}catch(err){
 		console.log("Error in batchInsert",err)
@@ -506,7 +505,6 @@ const batchInsert = async (req,res,entity) => {
 }
 
 const batchInsert_ = async (data,entity) => {
-	console.log('___-',data,entity)
 	const schema = schemas[entity].schema
 	var ret = null
 	try {
@@ -564,10 +562,10 @@ const importSerial = (req,res) => {
  	 }catch(e){
     res.status(406).json({})
   	}
-  	console.log("IMPORTDATA:",data)
  	data.map(async (serial) => {
  		var sql = `select id,part_id from mymes.serials where name = '${serial.SERIAL.SERIALNAME}';`
- 		var serial_id,parent_id,process,part_id
+ 		var serial_id,parent_id,part_id
+ 		var process = {}
  		try{
 	    	const xxx = await db.one(sql)  
 	    	serial_id = xxx.id
@@ -575,18 +573,18 @@ const importSerial = (req,res) => {
 
 	    }catch(e){ /*serial_id can be null*/ }	
  		try{
-	 		process = serial.SERIAL.PROCNAME ?  await db.one(`select id,name from mymes.process where erpproc = '${serial.SERIAL.PROCNAME}';`)  : null
+	 		process = serial.SERIAL.PROCNAME ?  await db.one(`select id,name from mymes.process where erpproc = '${serial.SERIAL.PROCNAME}';`)  : process
 	    }catch(e){ /*prosecc_id can be null*/ }	 
  		try{
 	 	 	parent_id = serial.SERIAL.PARENT ? await db.one(`select id from mymes.serials where name = '${serial.SERIAL.PARENT}';`): null 
 	    }catch(e){ /*parent_serial_id can be null*/ }
  		try{
  			sql = `select id from mymes.part where name = '${serial.PART.PARTNAME}' and revision = '${serial.PART.REVISION}';`
- 			console.log(sql,(await db.one(sql)).id)
 	 	 	part_id = !part_id && serial.PART.PARTNAME ? (await db.one(sql)).id : part_id 
 	    }catch(e){ /*parent_serial_id can be null*/ }	    
 
 	    const partAllreadyExists = part_id > 0 
+
 
 	    if(serial_id) {
 	    	console.log('all ready exists')
@@ -597,6 +595,7 @@ const importSerial = (req,res) => {
 	    	try {
 	    		if(!partAllreadyExists) {
 		    		try {
+    			
 				    	const partParams = {
 				    		name : serial.PART.PARTNAME,
 				    		active: true,
@@ -605,33 +604,56 @@ const importSerial = (req,res) => {
 				    		doc_revision: serial.PART.DOCREV,
 				    		row_type : 'part',
 				    		description : serial.PART.PARTDES,
-				    		lang_id :  1
+				    		lang_id :  1,
 				    	}
 						part_id = await InsertToTables(partParams,part_schema)
 					}catch(e){
 						console.log('part allready exists',e)
 					}
 				}
-	
+
+				let procName = ''
+				if(!process.id) {
+					serial.SERACT = await Promise.all(serial.SERACT && serial.SERACT.map(async (x) => {
+						const sql = `select id,name from mymes.actions where erpact = '${x.ACTNAME}';`
+						const act = await db.one(sql)
+						return {act_name: act.name, pos : x.POS}
+					})).then(actions => actions,e => null)
+
+					if (serial.SERACT) {
+						const processParams = {
+							name : serial.SERIAL.PROCNAME,
+							erpproc : serial.SERIAL.PROCNAME,
+							active : true,
+							description :  `Loadded with the WorkOrder: ${serial.SERIAL.SERIALNAME}`,
+							lang_id: 1
+						}						
+						const proc_id = await insert({body :processParams},res,'process',mute = true)					
+						serial.SERACT = serial.SERACT.map(x=> ({...x , parent: proc_id}))				
+						//const ret = proc_id ? await Promise.all( await batchInsert_(serial.SERACT,'proc_act')) : []
+						const ret = proc_id ? await Promise.all(serial.SERACT.map(act => insert({body:act},res,'proc_act',mute = true))) : []
+						procName = serial.SERIAL.PROCNAME
+					}
+				}
+
+	    		const end_date = serial.SERIAL.PEDATE ? {end_date : serial.SERIAL.PEDATE} : {}			
 		    	const serialParams = {
 		    		name : serial.SERIAL.SERIALNAME,
 		    		quant : serial.SERIAL.SERIALQUANT,
 		    		active: true,
 		    		partname : serial.PART.PARTNAME+':'+serial.PART.REVISION,
 		    		status: 'Released',
-		    		procname : process.id ? process.name : '',
+		    		procname : process.id ? process.name : procName,
 		    		part_serial_name: parent_id ? serial.SERIAL.PARENT : '',
 		    		row_type : 'serial',
 		    		end_date : null, 
 		    		extserial: serial.SERIAL.SERIALNAME,
 		    		description : serial.SERIAL.SERIALDES,
-		    		lang_id :  1
+		    		lang_id :  1,
+				    ...end_date		    		
 		    	}
 				serial_id = await insert({body :serialParams},res,'serials',mute = true)	
-						
-				if(!process.id) {
-					//inser seract
-				}
+
 				if(!partAllreadyExists){
 					serial.BOM = serial.BOM && serial.BOM.map(x => ({ lang_id: 1, partname : x.PARTNAME,	coef : x.COEF, parent : part_id}))
 					serial.LOC = serial.LOC && serial.LOC.map(x => ({ lang_id: 1, location : x.LOCATION, x :x.X, y: x.Y, z:x.Z,partname: x.PARTNAME,quant: x.QUANT, act_name :x.ACTNAME, parent : part_id}))
@@ -641,7 +663,7 @@ const importSerial = (req,res) => {
 				serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
 				const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,'kit')) : []
 			}catch(e){
-				console.log('',e)
+				console.log('error in importSerial : ',e)
 			}	
 		}
 
