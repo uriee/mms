@@ -12,9 +12,9 @@ exports.locations = {
 		sql: {
 			all: `select locations.id, part.id as parent, locations.partname,  locations.quant, locations.location, actions.name as act_name,
 					locations.x, locations.y, locations.z 
-					from mymes.locations as locations ,mymes.part as part, mymes.actions as actions
+					from mymes.locations as locations left join mymes.actions as actions on locations.act_id = actions.id,
+					mymes.part as part
 					where part.id = locations.part_id
-					and actions.id = locations.act_id 
 					and part.id = $3 
 					`,					
 
@@ -23,7 +23,7 @@ exports.locations = {
 			}
 
 		},
-
+		limit : 5000,
 		schema: {
 			pkey: 'part_id' ,
 
