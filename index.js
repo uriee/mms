@@ -14,7 +14,9 @@ const {
   runQuery,
   func,
   runFunc,
-  importSerial
+  importSerial,
+  exportWorkReport,
+  approveWorkReports  
 } = require('./models/Schemas')
 const {fetchDashData} = require('./models/Dash')
 const { bugInsert } = require('./models/utils')
@@ -93,6 +95,7 @@ router.get('/resources', async (req,res) => await User.authenticate(req,res,() =
 router.get('/notifications', (req,res) => fetchNotifications(req, res))
 router.get('/routes', (req,res) => fetchRoutes(req, res))
 router.get('/dash', (req,res) => User.authenticate(req,res,()=>fetchDashData(req, res)))
+router.get('/exportWorkReport', (req,res) => exportWorkReport(req, res))
 
 app.post('/mymes/bug', (req,res) => bugInsert(req,res))
 
@@ -109,6 +112,7 @@ router.get('/test', function(req, res) {
 
 
 app.post('/mymes/importserial', (req,res) => importSerial(req,res))
+app.post('/mymes/approveWorkReports', (req,res) => approveWorkReports(req,res))
 app.use('/mymes', router);
 
 app.listen(port);

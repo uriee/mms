@@ -160,7 +160,7 @@ const fetchRoutes = async(request, response) =>{
 }
 
 const fetchNotifications = async(request, response) =>{
-	const sql = `select id as identifier,name as id,title,type 
+	const sql = `select id ,title,type ,status,extra
 				 from mymes.notifications 
 				 where read is not true;`
 	try{
@@ -553,6 +553,71 @@ const batchUpdate = async (body,res) => {
     
 }
 
+/***
+* Get the approval of the erp acceptance of the work reports
+* And set approve propety of the reports to true
+****/
+const approveWorkReports = async (req,res) => {
+	var data = {}
+
+	try {
+		data = JSON.parse(req.body.data)
+	}catch(e){
+		res.status(406).json({})
+	}
+	console.log(data,data[0].REPORTS[0]);	
+	const ids = data[0].REPORTS.map(x => x.MESID);
+	let sql = `update mymes.work_report
+				set approved = true
+				where id = any (ARRAY[${ids}]) returning 1`
+	try{
+		lines = await db.any(sql)
+		res.status(200).json(lines)
+	}catch(e){
+		console.log("error in approveWorkReport : ",e)
+		res.status(406).json({error : e})
+	}
+}
+
+/***
+* Exports the Work Reports that are not yet Sent to the Erp server
+* And set Sent propety of the reports to true
+****/
+const exportWorkReport = async (req,res) => {
+	const option = {year:'2-digit', month: '2-digit', day: "2-digit" }
+	const date = new Date().toLocaleDateString("he",option).replace(/-/g,'/')
+	let sql = `select w.id as id ,extserial as wo,erpact as act,w.quant
+				from mymes.work_report as w,mymes.serials as s ,mymes.actions as a
+				where a.id = w.act_id
+				and s.id = w.serial_id
+				and extserial is not null
+				and erpact is not null
+				and (sent is null or sent is false);`
+	try{
+		lines = await db.any(sql)
+		const data = {
+			date : date,
+			data: lines
+		}
+
+		if (lines.length) {
+			res.status(200).json(data)
+		
+			const ids = lines.map(x=>x.id).toString()
+			sql = `update mymes.work_report
+				set sent = true
+				where id = any (ARRAY[${ids}]) returning 1`
+			db.any(sql).catch(e=> console.log(e))	
+		}
+		else {
+			res.status(405).json({massage : 'no data found'})
+		}
+	}catch(e){
+		console.log("error in exportWorkReport : ",e)
+		res.status(406).json({error : e})
+	}
+}
+
 const importSerial = (req,res) => {
 	const part_schema = schemas['parts'].schema
 	const serial_schema = schemas['serials'].schema	
@@ -672,5 +737,6 @@ const importSerial = (req,res) => {
 }
 
 module.exports = {
-  fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, batchInsert, insert, remove, runQuery ,runFunc, func, fetchNotifications, importSerial
+  fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, batchInsert, insert, remove,
+  runQuery ,runFunc, func, fetchNotifications, importSerial,  exportWorkReport ,approveWorkReports
 }

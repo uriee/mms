@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.actions = {
 		sql: {
-			all: `select actions.id, actions.name, actions.tags, actions_t.description, actions.active, actions.erpact, actions.quantitative
+			all: `select actions.id, actions.name, actions.tags, actions_t.description, actions.active, actions.erpact, actions.quantitative, actions.serial_report 
 					from mymes.actions as actions left join mymes.actions_t as actions_t on actions.id = actions_t.action_id 
 					where actions_t.lang_id = $1 `,					
 
@@ -47,7 +47,11 @@ exports.actions = {
 						{
 							field: 'quantitative',
 							variable : 'quantitative'
-						},												
+						},
+						{
+							field: 'serial_report',
+							variable : 'serial_report'
+						},																			
 						{
 							field: 'row_type',
 							variable : 'row_type',
