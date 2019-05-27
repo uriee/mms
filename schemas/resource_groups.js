@@ -103,7 +103,14 @@ exports.resource_groups = {
 						values : languagesArray
 					}
 				}
-			}
+			},
+			functions : [
+				{
+					name: 'Clone Resource Group',
+					parameteres: ['id'],
+					function : 'clone_resource_groups'
+				}
+			]			
 		}	
 	}
 
