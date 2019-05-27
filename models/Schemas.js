@@ -160,14 +160,18 @@ const fetchRoutes = async(request, response) =>{
 }
 
 const fetchNotifications = async(request, response) =>{
-	const sql = `select id ,title,type ,status,extra
+	const {user} = request.query
+	console.log('=========================================',request.query)
+	const sql = `select id ,title,type ,status,extra, schema
 				 from mymes.notifications 
-				 where read is not true;`
+				 where read is not true
+				 and username = '${user}';`
 	try{
 		const ret =  await db.any(sql).then(x=>x)	
 		response.status(200).json(ret)
 	}catch(e){
 		console.log(e)
+		response.status(200).json(ret)
 	}
 }
 /*
@@ -554,6 +558,33 @@ const batchUpdate = async (body,res) => {
 }
 
 /***
+* get notification id and username 
+* marks the notification as read if username = notification.user
+****/
+const markNotificationAsRead = async (req,res) => {
+	var data = {}
+	try {
+		data = req.body
+	}catch(e){
+		res.status(406).json({})
+	}
+	console.log('sdasd',req.body,data);	
+	const {id,user} = data
+
+	let sql = `update mymes.notifications
+				set read = true
+				where id = ${id} and username = '${user}'`
+
+	try{
+		console.log(sql)
+		res.status(200).json(await db.one(sql))
+	}catch(e){
+		console.log("error in markNotificationAsRead : ",e)
+		res.status(200).json({error : e})
+	}
+}
+
+/***
 * Get the approval of the erp acceptance of the work reports
 * And set approve propety of the reports to true
 ****/
@@ -626,7 +657,8 @@ const importSerial = (req,res) => {
     data = JSON.parse(req.body.data)
  	 }catch(e){
     res.status(406).json({})
-  	}
+	  }
+	console.log('DDDDAAATTAA ',data)  
  	data.map(async (serial) => {
  		var sql = `select id,part_id from mymes.serials where name = '${serial.SERIAL.SERIALNAME}';`
  		var serial_id,parent_id,part_id
@@ -653,8 +685,8 @@ const importSerial = (req,res) => {
 
 	    if(serial_id) {
 	    	console.log('all ready exists')
-			serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
-			const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,res,'kit')) : []	    	
+			serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1,lot: x.LOT, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
+			const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,'kit')) : []			   	
 	    }
 	    else{
 	    	try {
@@ -664,7 +696,7 @@ const importSerial = (req,res) => {
 				    	const partParams = {
 				    		name : serial.PART.PARTNAME,
 				    		active: true,
-				    		part_status : 'Production',
+				    		part_status : 'Active',
 				    		revision: serial.PART.REVISION,
 				    		doc_revision: serial.PART.DOCREV,
 				    		row_type : 'part',
@@ -725,7 +757,7 @@ const importSerial = (req,res) => {
 					const bom = serial.BOM && serial.BOM.length ? await Promise.all( await batchInsert_(serial.BOM,'bom')) : []
 					const loc = serial.LOC && serial.LOC.length ? await Promise.all( await batchInsert_(serial.LOC,'locations')) : []		
 				}
-				serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
+				serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1,lot: x.LOT, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
 				const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,'kit')) : []
 			}catch(e){
 				console.log('error in importSerial : ',e)
@@ -738,5 +770,5 @@ const importSerial = (req,res) => {
 
 module.exports = {
   fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, batchInsert, insert, remove,
-  runQuery ,runFunc, func, fetchNotifications, importSerial,  exportWorkReport ,approveWorkReports
+  runQuery ,runFunc, func, fetchNotifications, importSerial,  exportWorkReport ,approveWorkReports, markNotificationAsRead
 }
