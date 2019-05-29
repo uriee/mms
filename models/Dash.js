@@ -69,7 +69,7 @@ const work_report_placements_by_parent_resource = (param) => {
   const {fromdate,todate,interval,user} = param
   const inter = `1 ${interval}`
   return db.any(
-    `select res.name,d as x, sum(wr.quant) as y
+    `select res.name,d as x, sum(wr.quant) as y ,min(rh.depth) as depth
       from generate_series( $1, date $2 + interval '1 day - 1 minute', interval $4) as d
       left join mymes.work_report wr on date_trunc($3, wr.sig_date) = d
       left join mymes.serials wo on wo.id = wr.serial_id
@@ -77,8 +77,8 @@ const work_report_placements_by_parent_resource = (param) => {
       left join user_resources_by_parent($5) r on r.resource = rh.parent                        
       left join mymes.resources res on res.id = r.resource
       left join mymes.locations l  on l.part_id = wo.part_id and l.act_id = wr.act_id
-      group by res.name,d
-      order by d, res.name`
+      group by res.name,d 
+      order by d, depth desc,  res.name`
     ,[fromdate,todate,interval || 'day',(interval ? inter : '1 day'),user])
 }
 
