@@ -695,8 +695,8 @@ const importSerial = (req,res) => {
     			
 				    	const partParams = {
 				    		name : serial.PART.PARTNAME,
-				    		active: true,
-				    		part_status : 'Active',
+							active: true,
+							part_status : 'Active',
 				    		revision: serial.PART.REVISION,
 				    		doc_revision: serial.PART.DOCREV,
 				    		row_type : 'part',
