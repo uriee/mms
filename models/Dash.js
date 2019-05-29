@@ -78,21 +78,10 @@ const work_report_placements_by_parent_resource = (param) => {
       left join mymes.resources res on res.id = r.resource
       left join mymes.locations l  on l.part_id = wo.part_id and l.act_id = wr.act_id
       group by res.name,d
-      order by d`
+      order by d, res.name`
     ,[fromdate,todate,interval || 'day',(interval ? inter : '1 day'),user])
 }
 
-/*const fetchDashData2 = async (req,res) => {
-  const param = req.query || req.body
-  const func = funcs[param.func] 
-  try {
-        const data = await func(param)
-        res.status(201).json(data)
-      }catch(err){
-              res.status(401).json()
-              console.error(err)
-      }
-}*/
 
 const prod_funcs = [
   {name:  'wo_percent_total' , func: wo_percent_total},
