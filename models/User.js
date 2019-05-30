@@ -71,17 +71,17 @@ const findByToken =  async (token,user,auth) => {
 
 const getAuthority = () => {return {status: 'ok', type:'account'}}
 
-const authenticate = async (req,res,next) => {
+const authenticate = async (req,res,next,status=408) => {
   console.log('~~~~~~~~~~~~~1',req.method,req.query,req.body)
   const Utoken = (req.method == 'GET' ? req.query.token : req.body.token)
   const userName = (req.method == 'GET' ? req.query.user : req.body.user)
   let auth = (req.method == 'GET' ? req.query.auth : req.body.auth)
   auth = auth && auth.split('"')[1]  
-  console.log('~~~~~~~~~~~~~2',Utoken,userName,auth)
+  console.log('~~~~~~~~~~~~~2',Utoken,userName,auth,status)
   const isAuth = Utoken && userName && auth  && auth[0] && await findByToken(Utoken,userName,auth) ? true : false
   console.log("user auth3:",isAuth)    
   if (!isAuth)  {
-    res.status(408).json({err : 'Not Authorized'})
+    res.status(status).json({err : 'Not Authorized'})
     return isAuth
   } else return next();  
 }

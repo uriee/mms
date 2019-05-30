@@ -94,7 +94,7 @@ router.get('/fetch', async (req,res) => await User.authenticate(req,res,() => fe
 router.get('/tags', async (req,res) => await User.authenticate(req,res,() => fetchTags(req, res, 'tags'))) 
 router.get('/resources', async (req,res) => await User.authenticate(req,res,() => fetchResources(req, res))) 
 //router.get('/notifications', (req,res) => fetchNotifications(req, res))
-router.get('/notifications', (req,res) => User.authenticate(req,res,()=>fetchNotifications(req, res))) 
+router.get('/notifications', (req,res) => User.authenticate(req,res,()=>fetchNotifications(req, res),status=208)) 
 router.get('/routes', (req,res) => fetchRoutes(req, res))
 router.get('/dash', (req,res) => User.authenticate(req,res,()=>fetchDashData(req, res)))
 router.get('/exportWorkReport', (req,res) => exportWorkReport(req, res))
