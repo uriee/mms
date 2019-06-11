@@ -87,7 +87,14 @@ exports.actions = {
 						values : languagesArray
 					}
 				}
-			}
+			},
+			functions : [
+				{
+					name: 'Clone Actions',
+					parameteres: ['id'],
+					function : 'clone_actions'
+				}
+			]
 		}	
 	}
 

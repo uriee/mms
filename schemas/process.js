@@ -82,7 +82,14 @@ exports.process = {
 						values : languagesArray
 					}
 				}
-			}
+			},
+			functions : [
+				{
+					name: 'Clone Process',
+					parameteres: ['id'],
+					function : 'clone_process'
+				}
+			]			
 		}	
 	}
 
