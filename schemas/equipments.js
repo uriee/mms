@@ -109,7 +109,16 @@ exports.equipments = {
 						values : languagesArray
 					}
 				}
-			}
+			},
+
+			functions : [
+				{
+					name: 'Clone Equipments',
+					parameteres: ['id'],
+					function : 'clone_equipments'
+				}
+			]
+
 		}	
 	}
 
