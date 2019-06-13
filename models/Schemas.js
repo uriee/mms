@@ -257,7 +257,8 @@ const getFkeys = async (fkeys,params) => {
 const InsertToTables = async (params,schema) => {
 	const keys = await getFkeys(schema.fkeys,params)
     const tables = Object.keys(schema.tables)
-    const isPublic = !!schema.public
+	const isPublic = !!schema.public
+	console.log("PPPPUUUBBBLLLLICCCCC:",isPublic,schema)
 	const id  = schema.pkey
 	var new_id = 0    
 	/*Check to see if all required fields has value*/
@@ -361,7 +362,7 @@ const update = async (req, res, entity) => {
 	let params = {}
 	Object.keys(req.body).forEach(x=> params[x] = typeof req.body[x] === 'string' ?  req.body[x].replace(/'/g,"") : req.body[x]) //Protection againt sql injection
 	const schema = schemas[entity].schema
-	const isPublic = !!schemas[entity].public
+	const isPublic = !!schema.public
 	const tables= schema.tables
 	const tableNames  = Object.keys(tables)
 	let  fkSchema = {}
@@ -433,7 +434,7 @@ const remove = async (req, res, entity) => {
 let params = {}
 	Object.keys(req.body).forEach(x=> params[x] = typeof req.body[x] === 'string' ?  req.body[x].replace(/'/g,"") : req.body[x]) //Protection againt sql injection
 	const schema = schemas[entity].schema
-	const isPublic = !!schemas[entity].public	
+	const isPublic = !!schema.public	
 	let table = Object.keys(schema.tables)[0] /*all  translation tables are now deleted by DB constarint */
 	const key = schema.tables[table].fields.filter(x =>  x.key)[0].key
 	const {pre_delete, post_delete} = schemas[entity]

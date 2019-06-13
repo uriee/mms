@@ -20,7 +20,7 @@ exports.users = {
 		},
 
 		schema: {			
-
+			public: true,	
 			pkey: 'user_id' ,
 
 			fkeys: {

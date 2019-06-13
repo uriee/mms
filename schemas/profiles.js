@@ -23,6 +23,7 @@ exports.profiles = {
 		},
 
 		schema: {
+			public: true,
 			pkey: 'profile_id' ,
 
 			fkeys: {
