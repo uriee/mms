@@ -1,6 +1,6 @@
 // Use !{var} to use unescaped conent
 style(type="text/css") !{compiledStyle}
-img.logo(src='http://localhost:8000/static/FAB.ico.f5d25433.png')
+img.logo(src='http://localhost/static/logo.png')
 h1.title Work Orders List
 
 table
@@ -15,9 +15,9 @@ table
             th Status
             
     tbody
-        each line in data.list
+        each line,index in data.list
             tr
-                td #{line.id}
+                td #{index +1}
                 td #{line.name}
                 td #{line.partname}
                 td #{line.quant}
