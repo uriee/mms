@@ -22,10 +22,18 @@ const {
 const {fetchDashData} = require('./models/Dash')
 const { bugInsert } = require('./models/utils')
 const app = express();
-const bodyParser = require('body-parser');
-app.use(bodyParser.json({limit: "50mb"})); // 
+const bodyParser = require('body-parser')
+app.use(bodyParser.json({limit: "50mb"})) 
 app.use(bodyParser.urlencoded({limit: "50mb", extended: true, parameterLimit:50000}));
-const cors = require('cors');
+const cors = require('cors')
+
+// Object for rendering Reports
+const fs = require('fs')
+const path = require('path')
+const puppeteer = require('puppeteer')
+const pug = require('pug')
+const sass = require('node-sass')
+const SassOprions = sass.Options
 
 app.use(bodyParser.urlencoded({
     extended: true
@@ -60,7 +68,29 @@ const entityDict = {
 }
 const getEntity = (entity) => entityDict[entity] || entity
 
+const createPDF = async (req, res, next)  => {
+  
+  const body = JSON.parse(req.body.xxx)
+  const sass_file = {file :path.resolve(__dirname+'/templates','table.scss')}
+  const pug_file = path.resolve(__dirname+'/templates','serials.pug')
 
+  const browser = await puppeteer.launch({ headless: true })
+  const page = await browser.newPage()  
+  const compiledStyle = sass.renderSync({...sass_file});
+  let  Template = {
+      ...body,
+      compiledStyle: compiledStyle.css,
+  }
+  let renderedTemplate = pug.renderFile(pug_file, Template) //data)
+
+  //let renderedTemplate = pug.render('p Hello world עברית !');
+  //console.log(renderedTemplate+'uri',pug_file, data)
+  //await page.goto(`data:text/html,${renderedTemplate}`,  {waitUntil: ['load', 'domcontentloaded', 'networkidle0']});
+  await page.setContent(renderedTemplate)
+  const buffer = await page.pdf({format: 'A4'});
+  await browser.close()
+  res.end(buffer)
+}
 
 app.post('/mymes/signin', User.signin)
 //app.post('/mymes/signup', (req,res) => User.signup(req,res))
@@ -108,15 +138,16 @@ app.post('/secure', async (request, response) => {
   if (a === false) response.status(404).json({ message: 'YOU ARE not authenticated'})
 });
 
-router.get('/test', function(req, res) {
- User.test()
-});
+app.post('/mymes/test', (req,res) => {
+  createPDF(req,res)   
+})
 
 
 app.post('/mymes/importserial', (req,res) => importSerial(req,res))
 app.post('/mymes/approveWorkReports', (req,res) => approveWorkReports(req,res))
 app.post('/mymes/markNotificationAsRead', (req,res) => markNotificationAsRead(req,res))
 app.use('/mymes', router);
+
 
 app.listen(port);
 console.log('Magic happens on port ' + port);

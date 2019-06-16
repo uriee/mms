@@ -1,0 +1,31 @@
+// Use !{var} to use unescaped conent
+style(type="text/css") !{compiledStyle}
+img.logo(src='http://localhost:8000/static/FAB.ico.f5d25433.png')
+h1.title Work Orders List
+
+table
+    thead
+        tr
+            th #
+            th Name
+            th Part
+            th Quantity
+            th Process
+            th Description
+            th Status
+            
+    tbody
+        each line in data.list
+            tr
+                td #{line.id}
+                td #{line.name}
+                td #{line.partname}
+                td #{line.quant}
+                td #{line.procname}
+                td #{line.description}
+                td #{line.status}
+
+//div.table-footer total: $#{data.total}
+
+h3.comments-title Signiture
+//p #{data.username}
