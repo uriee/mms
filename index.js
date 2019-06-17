@@ -71,6 +71,7 @@ const getEntity = (entity) => entityDict[entity] || entity
 const createPDF = async (req, res, next)  => {
   
   const body = JSON.parse(req.body.xxx)
+
   const sass_file = {file :path.resolve(__dirname+'/templates','table.scss')}
   const pug_file = path.resolve(__dirname+'/templates','serials.pug')
 
@@ -104,7 +105,7 @@ app.post('/mymes/updateroutes', async (req,res) => {
       await runQuery(`update routes set routes = '${req.body.routes}'`)
       res.status(201).json({main:2})
     } catch(err) {
-      console.log(err)
+      console.error(err)
       res.status(406).json({error:err})
     }
  })

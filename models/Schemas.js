@@ -1,6 +1,7 @@
 //db connection configuration
 const {db} = require('../DBConfig.js')
 const {flatten} = require('lodash')
+const {changeUserPassword} = require('./User.js')
 
 const {employees} = require('../schemas/employees.js')
 const {parts} = require('../schemas/parts.js')
@@ -102,7 +103,7 @@ const fetchTags = async(request, response) =>{
 		const ret =  await db.any(sql).then(x=>x)	
 		response.status(200).json({main:ret})
 	}catch(e){
-		console.log(e)
+		console.error(e)
 	}
 }
 
@@ -140,10 +141,9 @@ const fetchResources = async(request, response) =>{
 		branches = ret.filter(x=>x.resource_ids)
 		tree = DBToTree(ret)
 		dbroot = branches.filter(x=>ret[0].id)
-		console.log("dbroot",tree);
 		response.status(200).json({main:DBToTree(ret)})
 	}catch(e){
-		console.log(e)
+		console.error(e)
 	}
 }
 
@@ -155,13 +155,12 @@ const fetchRoutes = async(request, response) =>{
 		const ret =  await db.any(sql).then(x=>x)	
 		response.status(200).json({main:ret})
 	}catch(e){
-		console.log(e)
+		console.error(e)
 	}
 }
 
 const fetchNotifications = async(request, response) =>{
 	const {user} = request.query
-	console.log('=========================================',request.query)
 	const sql = `select id ,title,type ,status,extra, schema
 				 from mymes.notifications 
 				 where read is not true
@@ -170,7 +169,7 @@ const fetchNotifications = async(request, response) =>{
 		const ret =  await db.any(sql).then(x=>x)	
 		response.status(200).json(ret)
 	}catch(e){
-		console.log(e)
+		console.error(e)
 		response.status(200).json(ret)
 	}
 }
@@ -208,7 +207,6 @@ const fetch = async (request, response, entity) => {
 	    return ret
 		} catch(err) {
 			response.status(403).json(err)
-			console.log("testetststetetsts s:   ",err)
 		}
 }
 
@@ -216,7 +214,7 @@ const runQuery = async (query) => {
 	try{
 		return await db.any(query).then(x => x)
 	} catch(err) {
-		console.log(err)
+		console.error(err)
 		throw new Error(err)
 	}
 }
@@ -247,7 +245,7 @@ const getFkeys = async (fkeys,params) => {
 
 	} catch(err) {
 		err = 'ERROR in fkeys() :' + err
-		console.log(err)
+		console.error(err)
 		throw new error(err)
 		}
 	return keys;
@@ -258,7 +256,6 @@ const InsertToTables = async (params,schema) => {
 	const keys = await getFkeys(schema.fkeys,params)
     const tables = Object.keys(schema.tables)
 	const isPublic = !!schema.public
-	console.log("PPPPUUUBBBLLLLICCCCC:",isPublic,schema)
 	const id  = schema.pkey
 	var new_id = 0    
 	/*Check to see if all required fields has value*/
@@ -329,7 +326,7 @@ const insert = async (req, res, entity , mute = false) => {
 											        console.log(`Return from function - ${pre_insert.function} : ${data}`); 
 											    })									    
 		}catch(err) {
-			console.log("pre_insert:",err)
+			console.error("pre_insert:",err)
 			if (!mute) res.status(406).json({error: 'pre_insert : '+err})
 			throw new Error("PreInsert fault")
 		}
@@ -341,18 +338,17 @@ const insert = async (req, res, entity , mute = false) => {
 		const post_insert = schemas[entity].post_insert						
 		params.id = new_id
 		const parameters = post_insert && post_insert.parameters.map(x => params[x])
-		console.log("DEbug post_insert: ",entity, post_insert, parameters)
 		const post = post_insert && parameters && db.func(post_insert.function, parameters)
 											    .then(data => {
 											        console.log(`Return from function - ${post_insert.function} : ${data}`); 
 											    })
 											    .catch(error => {
-											        console.log('ERROR:', error); 
+											        console.error('ERROR:', error); 
 											        throw new Error("PostInsert fault")
 											    });
 		return new_id											    
 	} catch(err) {
-		console.log("Insert:",err)
+		console.error("error in Insert:",err)
 		if (!mute) res.status(406).json({error: err})
 		throw new Error("Insert fault :" + err.toString())
 	}
@@ -412,13 +408,14 @@ const update = async (req, res, entity) => {
 
 						// Execeute the Post-Insert Statement from the schema
 		const post_update = schemas[entity].post_update
-		const parameters = post_update && post_update.parameters.map(x => params[x])
-		const post = post_update && parameters && db.func(post_update.function, parameters)
+		const parameters = post_update && post_update.parameters && post_update.parameters.map(x => params[x])
+		const post = post_update && params.password2 && entity === 'users' ? changeUserPassword(params.name,params.password2) : 
+			post_update && parameters && db.func(post_update.function, parameters)
 											    .then(data => {
 											        console.log(`Return from function - ${post_update.function} : ${data}`); 
 											    })
 											    .catch(error => {
-											        console.log('ERROR:', error); 
+											        console.error('ERROR in post_update:', error); 
 											    });
 
 		res.status(202).json(ret)
@@ -463,7 +460,7 @@ let params = {}
 	res.status(205).json(ret)
 		return 
 	} catch(err) {
-		console.log("delete:",err)
+		console.error("delete:",err)
 		res.status(406).json({error:'delete : '+err})
 	}
 }
@@ -471,13 +468,12 @@ let params = {}
 const func = async (req, res, entity) => {
 	let { funcName, keys }  = req.body
 	const schema = schemas[entity].schema
-	console.log("func:", funcName, keys,req.body)
 	try {
    	const ret  = await Promise.all(keys.map(key => db.func(`${funcName}_${entity}`, key)))
 		res.status(230).json(ret)
 		return 
 	} catch(err) {
-		console.log(err)
+		console.error(err)
 		res.status(406).json({error:err})
 	}
 
@@ -485,13 +481,12 @@ const func = async (req, res, entity) => {
 
 const runFunc = async (req, res, funcname) => {
 	let { params } = req.body
-	console.log("func:", funcName, keys,req.body)
 	try {
    	const ret  = await db.func(funcName, params)
 		res.status(230).json(ret)
 		return 
 	} catch(err) {
-		console.log(err)
+		console.error(err)
 		res.status(406).json({error:err})
 	}
 }
@@ -504,7 +499,7 @@ const batchInsert = async (req,res,entity) => {
 		const ret = await Promise.all(await batchInsert_(req.body.data,entity))
 		res.status(200).json({inserted:ret})
 	}catch(err){
-		console.log("Error in batchInsert",err)
+		console.error("Error in batchInsert",err)
 		res.status(406).json({error:err})
 	}	
 }
@@ -523,7 +518,7 @@ const batchInsert_ = async (data,entity) => {
 		})
 		return ret
 	}catch(err){
-		console.log("Error in batchInsert_",ret,err)
+		console.error("Error in batchInsert_",ret,err)
 		return 0
 	}
 }
@@ -552,7 +547,7 @@ const batchUpdate = async (body,res) => {
 		return 
     })
     .catch(error => {
-        console.log('ERROR:', error);
+        console.error('ERROR:', error);
         res.status(406).json({error:err})
     });
     
@@ -569,7 +564,6 @@ const markNotificationAsRead = async (req,res) => {
 	}catch(e){
 		res.status(406).json({})
 	}
-	console.log('sdasd',req.body,data);	
 	const {id,user} = data
 
 	let sql = `update mymes.notifications
@@ -577,10 +571,9 @@ const markNotificationAsRead = async (req,res) => {
 				where id = ${id} and username = '${user}'`
 
 	try{
-		console.log(sql)
 		res.status(200).json(await db.one(sql))
 	}catch(e){
-		console.log("error in markNotificationAsRead : ",e)
+		console.error("error in markNotificationAsRead : ",e)
 		res.status(200).json({error : e})
 	}
 }
@@ -597,7 +590,6 @@ const approveWorkReports = async (req,res) => {
 	}catch(e){
 		res.status(406).json({})
 	}
-	console.log(data,data[0].REPORTS[0]);	
 	const ids = data[0].REPORTS.map(x => x.MESID);
 	let sql = `update mymes.work_report
 				set approved = true
@@ -606,7 +598,7 @@ const approveWorkReports = async (req,res) => {
 		lines = await db.any(sql)
 		res.status(200).json(lines)
 	}catch(e){
-		console.log("error in approveWorkReport : ",e)
+		console.error("error in approveWorkReport : ",e)
 		res.status(406).json({error : e})
 	}
 }
@@ -639,13 +631,13 @@ const exportWorkReport = async (req,res) => {
 			sql = `update mymes.work_report
 				set sent = true
 				where id = any (ARRAY[${ids}]) returning 1`
-			db.any(sql).catch(e=> console.log(e))	
+			db.any(sql).catch(e=> console.error(e))	
 		}
 		else {
 			res.status(405).json({massage : 'no data found'})
 		}
 	}catch(e){
-		console.log("error in exportWorkReport : ",e)
+		console.error("error in exportWorkReport : ",e)
 		res.status(406).json({error : e})
 	}
 }
@@ -659,7 +651,6 @@ const importSerial = (req,res) => {
  	 }catch(e){
     res.status(406).json({})
 	  }
-	console.log('DDDDAAATTAA ',data)  
  	data.map(async (serial) => {
  		var sql = `select id,part_id from mymes.serials where name = '${serial.SERIAL.SERIALNAME}';`
  		var serial_id,parent_id,part_id
@@ -685,7 +676,7 @@ const importSerial = (req,res) => {
 
 
 	    if(serial_id) {
-	    	console.log('all ready exists')
+	    	console.warn('all ready exists')
 			serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1,lot: x.LOT, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
 			const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,'kit')) : []			   	
 	    }
@@ -706,7 +697,7 @@ const importSerial = (req,res) => {
 				    	}
 						part_id = await InsertToTables(partParams,part_schema)
 					}catch(e){
-						console.log('part allready exists',e)
+						console.warn('part allready exists',e)
 					}
 				}
 
@@ -761,7 +752,7 @@ const importSerial = (req,res) => {
 				serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1,lot: x.LOT, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
 				const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,'kit')) : []
 			}catch(e){
-				console.log('error in importSerial : ',e)
+				console.error('error in importSerial : ',e)
 			}	
 		}
 

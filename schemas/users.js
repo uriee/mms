@@ -9,6 +9,7 @@
 exports.users = {
 		public: true,		
 
+
 		sql: {
 			all: `select  users.id as key, users.id, username as name, profile.name as "currentAuthority", users.email, users.title, users.created_at, users.tags
 					from users as users left join profiles as profile on users.profile_id = profile.id
@@ -17,6 +18,10 @@ exports.users = {
 			choosers :{
 				profiles: `select name from profiles where active = true;`,
 			},
+		},
+
+		post_update: {
+			// change password
 		},
 
 		schema: {			
