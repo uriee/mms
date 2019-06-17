@@ -409,7 +409,7 @@ const update = async (req, res, entity) => {
 						// Execeute the Post-Insert Statement from the schema
 		const post_update = schemas[entity].post_update
 		const parameters = post_update && post_update.parameters && post_update.parameters.map(x => params[x])
-		const post = post_update && params.password2 && entity === 'users' ? changeUserPassword(params.name,params.password2) : 
+		const post = post_update && params.password && entity === 'users' ? changeUserPassword(params.name,params.password) : 
 			post_update && parameters && db.func(post_update.function, parameters)
 											    .then(data => {
 											        console.log(`Return from function - ${post_update.function} : ${data}`); 
@@ -574,6 +574,26 @@ const markNotificationAsRead = async (req,res) => {
 		res.status(200).json(await db.one(sql))
 	}catch(e){
 		console.error("error in markNotificationAsRead : ",e)
+		res.status(200).json({error : e})
+	}
+}
+
+const changeUserLang = async (req,res) => {
+	var data = {}
+	try {
+		data = req.body
+	}catch(e){
+		res.status(406).json({})
+	}
+	const {local,user} = data
+	
+	let sql = `update users
+				set local = '${local}'
+				where username = '${user}'`
+	try{
+		res.status(200).json(await db.one(sql))
+	}catch(e){
+		console.error("error in changeUserLang : ",e)
 		res.status(200).json({error : e})
 	}
 }
@@ -762,5 +782,5 @@ const importSerial = (req,res) => {
 
 module.exports = {
   fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, batchInsert, insert, remove,
-  runQuery ,runFunc, func, fetchNotifications, importSerial,  exportWorkReport ,approveWorkReports, markNotificationAsRead
+  runQuery ,runFunc, func, fetchNotifications, importSerial,  exportWorkReport ,approveWorkReports, markNotificationAsRead , changeUserLang 
 }

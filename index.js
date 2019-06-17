@@ -17,7 +17,8 @@ const {
   importSerial,
   exportWorkReport,
   approveWorkReports ,
-  markNotificationAsRead
+  markNotificationAsRead,
+  changeUserLang
 } = require('./models/Schemas')
 const {fetchDashData} = require('./models/Dash')
 const { bugInsert } = require('./models/utils')
@@ -147,6 +148,7 @@ app.post('/mymes/test', (req,res) => {
 app.post('/mymes/importserial', (req,res) => importSerial(req,res))
 app.post('/mymes/approveWorkReports', (req,res) => approveWorkReports(req,res))
 app.post('/mymes/markNotificationAsRead', (req,res) => markNotificationAsRead(req,res))
+app.post('/mymes/changeUserLang', (req,res) => changeUserLang(req,res))
 app.use('/mymes', router);
 
 
