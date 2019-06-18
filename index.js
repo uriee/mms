@@ -70,7 +70,9 @@ const entityDict = {
 const getEntity = (entity) => entityDict[entity] || entity
 
 const createPDF = async (req, res, next)  => {
-  const body = JSON.parse(req.body.xxx)
+  console.log(req.body)
+  const body = req.body
+
   const sass_file = {file :path.resolve(__dirname+'/templates','table.scss')}
   const pug_file = path.resolve(__dirname+'/templates','serials.pug')
   const browser = await puppeteer.launch({ headless: true })
