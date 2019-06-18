@@ -585,10 +585,10 @@ const changeUserLang = async (req,res) => {
 	}catch(e){
 		res.status(406).json({})
 	}
-	const {local,user} = data
+	const {locale,user} = data
 	
 	let sql = `update users
-				set local = '${local}'
+				set locale = '${locale}'
 				where username = '${user}'`
 	try{
 		res.status(200).json(await db.one(sql))

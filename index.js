@@ -70,23 +70,18 @@ const entityDict = {
 const getEntity = (entity) => entityDict[entity] || entity
 
 const createPDF = async (req, res, next)  => {
-  
   const body = JSON.parse(req.body.xxx)
-
   const sass_file = {file :path.resolve(__dirname+'/templates','table.scss')}
   const pug_file = path.resolve(__dirname+'/templates','serials.pug')
-
   const browser = await puppeteer.launch({ headless: true })
   const page = await browser.newPage()  
+
   const compiledStyle = sass.renderSync({...sass_file});
   let  Template = {
       ...body,
       compiledStyle: compiledStyle.css,
   }
-  let renderedTemplate = pug.renderFile(pug_file, Template) //data)
-
-  //let renderedTemplate = pug.render('p Hello world עברית !');
-  //console.log(renderedTemplate+'uri',pug_file, data)
+  let renderedTemplate = pug.renderFile(pug_file, Template) 
   //await page.goto(`data:text/html,${renderedTemplate}`,  {waitUntil: ['load', 'domcontentloaded', 'networkidle0']});
   await page.setContent(renderedTemplate)
   const buffer = await page.pdf({format: 'A4'});
