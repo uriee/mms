@@ -159,6 +159,27 @@ const fetchRoutes = async(request, response) =>{
 	}
 }
 
+const fetchWorkPaths = async(request, response) =>{
+	const {user} = request.query
+	const sql = `select r.name as resourcename,serial.name as serialname,act.name as actname ,seract.balance , seract.quant
+	from mymes.actions as act,
+	mymes.serials as serial , mymes.serial_act as seract
+	join mymes.act_resources as ar on (ar.act_id = seract.id and type = 3)
+	join mymes.resources as r on r.id = ar.resource_id 
+	where serial.id = seract.serial_id and act.id = seract.act_id 
+	and serial.active=true and act.active=true
+	and r.id in (select resource from user_parent_resources('${user}'))
+	and seract.balance > 0 
+	order by serial.name,seract.pos;`
+
+	try{
+		const ret =  await db.any(sql).then(x=>x)	
+		response.status(200).json({main:ret})
+	}catch(e){
+		console.error(e)
+	}
+}
+
 const fetchNotifications = async(request, response) =>{
 	const {user} = request.query
 	const sql = `select id ,title,type ,status,extra, schema
@@ -279,35 +300,48 @@ const InsertToTables = async (params,schema) => {
 					(Array.isArray(keys[x.fkey]) && (keys[x.fkey].length > 1 || x.field ===  'resource_ids') ? `'{${keys[x.fkey]}}'` : keys[x.fkey]) :
 					`'${params[x.variable]}'${x.conv ? x.conv: ''}`
 				})
-	let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tables[0]}(${fields}) values(${values}) returning id;`
-	console.log("insert query maintable",sql)
-	new_id = keys[id] = await db.one(sql).then(x => x.id)
+	let mainTableSql = `insert into ${!isPublic ? 'mymes.' : ''}${tables[0]}(${fields}) values(${values}) returning id;`
+	console.log("insert query maintable",mainTableSql)
+	new_id = keys[id] = '$1'
 	tables.shift()
-	const ret  = await Promise.all(tables.map(async (tablename)=>{
+
+	var sqls  = tables.map( tablename => {		
 		const table = schema.tables[tablename]
 		const fields = table.fields.filter(x => x.field).map(x => x.field)
 		if (table.hasOwnProperty('fill')) {
 			let field = table.fill.field
-			return await Promise.all(table.fill.values.map(val => {
+			return table.fill.values.map(val => {	
 				let values = table.fields.filter(x => x.field )
 										 .map(x =>  x.field === field ?
 										 	 val : x.hasOwnProperty('fkey') ?
 										 	 keys[x.fkey] : `'${params[x.variable+(val === params['lang_id'] || !params[x.variable] ? '' : '_t')]}'`
 										 )
 				let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`
-				return db.one(sql).then(x => x)
-			}))
+				//sqls.push(sql)
+				return sql
+			})
 
 		}
 		else {
 			let values = table.fields.filter(x => x.field).map(x =>  x.hasOwnProperty('fkey') ? keys[x.fkey] : `'${params[x.variable]}'`)
-			let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`		
-			let ret =  await db.one(sql).then(x => x)
-			return ret
+			let checkValues = table.fields.filter(x => x.field).map(x =>  x.hasOwnProperty('fkey') ? keys[x.fkey] : params[x.variable])
+			let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`	
+			return checkValues.every(x=>x) ? sql : null
 		}
-	}))
+	}).filter(x=>x).flat()
 
-	return new_id	
+	console.log("main : ",mainTableSql," sqls : ", sqls)	
+	
+	var new_id = await db.tx( async t => {
+		new_key = await t.oneOrNone(mainTableSql)
+		console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',new_key)
+		const c = await Promise.all(sqls.map(sql => t.any(sql,[new_key.id])))
+		return new_key
+	}).catch(error => {
+			console.error(error)
+			throw new Error("Error in inset to tables : ",error)
+	});
+	return new_id.id
 }
 
 const insert = async (req, res, entity , mute = false) => {
@@ -388,18 +422,6 @@ const update = async (req, res, entity) => {
 				  							   .map(field => ({where : field.field > '' ? field.field : field.key , equals: params[field.key]}))
 				  	const sqlSet = sets.reduce((old,set) => old + `"${set.set}" = '${set.to}'${set.conv ? set.conv: ''},`,'').slice(0,-1)
 				  	const sqlWhere = wheres.reduce((old,where) => old + `${where.where} = '${where.equals}' and `,'').slice(0,-5)
-				  	//const keyField = table.fields.filter(x => x.key && !x.field)[0].key
-					/*const sql = `UPDATE mymes.${tn}
-								SET  ${sqlSet} 
-								WHERE  ${keyField} = (
-								         SELECT ${keyField}
-								         FROM   mymes.${tn}
-								         WHERE  ${sqlWhere}
-								         LIMIT  1
-								         FOR UPDATE SKIP LOCKED
-								         )
-								RETURNING 1;`				  	
-								*/
 				  	const sql = `update ${!isPublic ? 'mymes.' : ''}${tn} set ${sqlSet} where ${sqlWhere} returning 1;`
 				  	console.log("update sql:",sql)
 				  	const ret  = runQuery(sql)
@@ -782,5 +804,5 @@ const importSerial = (req,res) => {
 
 module.exports = {
   fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, batchInsert, insert, remove,
-  runQuery ,runFunc, func, fetchNotifications, importSerial,  exportWorkReport ,approveWorkReports, markNotificationAsRead , changeUserLang 
+  runQuery ,runFunc, func, fetchNotifications, importSerial,  exportWorkReport ,approveWorkReports, markNotificationAsRead , changeUserLang ,fetchWorkPaths
 }
