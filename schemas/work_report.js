@@ -55,7 +55,7 @@ exports.work_report = {
 		},		
 
 		schema: {
-			pkey: 'serial_id' ,
+			pkey: 'work_report_id' ,
 
 			fkeys: {
 				serial_id: {
@@ -118,7 +118,23 @@ exports.work_report = {
 							key: 'id'
 						}
 				   ]
-				}
+				},
+				identifier :{
+					fields : [
+						{
+							field: 'work_report_id',
+							fkey: 'work_report_id',
+							key: 'id'
+						},					
+						{
+							field: 'name',
+							variable : 'identifier'
+						},											
+						{
+							key: 'id'
+						}						
+					],
+				}					
 			}
 		}	
 	}
