@@ -180,6 +180,27 @@ const fetchWorkPaths = async(request, response) =>{
 	}
 }
 
+const fetchWR = async(request, response) =>{
+	const {serialname,actname} = request.query
+	const sql = `select sig_date, wr.quant, users.username , identifier.name as serial , resources.name as resourcename
+	from mymes.resources , mymes.actions , mymes.serials ,users,
+	mymes.work_report wr left join mymes.identifier on wr.id = identifier.work_report_id 
+	where wr.resource_id = resources.id
+	and wr.act_id = actions.id
+	and wr.serial_id = serials.id
+	and users.id = wr.sig_user
+	and serials.name = '${serialname}'
+	and actions.name = '${actname}'
+	order by sig_date desc;`
+
+	try{
+		const ret =  await db.any(sql).then(x=>x)	
+		response.status(200).json({main:ret})
+	}catch(e){
+		console.error(e)
+	}
+}
+
 const fetchNotifications = async(request, response) =>{
 	const {user} = request.query
 	const sql = `select id ,title,type ,status,extra, schema
@@ -200,7 +221,7 @@ Populate the response data from DB with the requested data of a certain entity
 const fetch = async (request, response, entity) => {
 	const {lang/*pageSize,currentPage*/,zoom,name,parent,user} = request.query
 	const tables = schemas[entity].schema.tables
-	const limit =  schemas[entity].limit || 100
+	const limit =  schemas[entity].limit || 50
 	const filters = flatten(	
 							Object.keys(tables)
 							.map(table=> tables[table].fields
@@ -280,16 +301,18 @@ const InsertToTables = async (params,schema) => {
 	const id  = schema.pkey
 	var new_id = 0    
 	/*Check to see if all required fields has value*/
+
 	const required = tables.reduce(
 		(ret,table) => ret + schema.tables[table].fields.filter(field => field.required).reduce(
 			(o,field)=>{
 			return o + (params[field.field] ? 1 : 0)} , 0) 	,0
 		) || 1
 	if(!required) throw new Error('There are some required fields with no value!');
-	
+
 	const maintable = schema.tables[tables[0]]
-	const insertFields = maintable.fields.filter(x => x.field && (x.value || keys[x.fkey]>'' ||params[x.variable]>''))
+	const insertFields = maintable.fields.filter(x => x.field && (x.value || keys[x.fkey]>'' || params[x.variable]))
 	let fields = insertFields.map(x => x.field)
+	console.log('Inser5t params',params,insertFields,fields)	
 	let values = insertFields
 				.map(x => {
 
@@ -804,5 +827,6 @@ const importSerial = (req,res) => {
 
 module.exports = {
   fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, batchInsert, insert, remove,
-  runQuery ,runFunc, func, fetchNotifications, importSerial,  exportWorkReport ,approveWorkReports, markNotificationAsRead , changeUserLang ,fetchWorkPaths
+  runQuery ,runFunc, func, fetchNotifications, importSerial,  exportWorkReport ,approveWorkReports, markNotificationAsRead ,
+  changeUserLang ,fetchWorkPaths , fetchWR
 }

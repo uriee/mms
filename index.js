@@ -19,7 +19,8 @@ const {
   approveWorkReports ,
   markNotificationAsRead,
   changeUserLang,
-  fetchWorkPaths  
+  fetchWorkPaths ,
+  fetchWR 
 } = require('./models/Schemas')
 const {fetchDashData} = require('./models/Dash')
 const { bugInsert } = require('./models/utils')
@@ -127,6 +128,7 @@ router.get('/routes', (req,res) => fetchRoutes(req, res))
 router.get('/dash', (req,res) => User.authenticate(req,res,()=>fetchDashData(req, res)))
 router.get('/exportWorkReport', (req,res) => exportWorkReport(req, res))
 router.get('/workPaths', (req,res) => fetchWorkPaths(req, res))
+router.get('/fetchWR', (req,res) => fetchWR(req, res))
 
 app.post('/mymes/bug', (req,res) => bugInsert(req,res))
 
