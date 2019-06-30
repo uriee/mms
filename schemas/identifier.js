@@ -8,22 +8,19 @@ const {languagesArray} = require('./schema_conf.js')
 	schema.fkeys : keys that need to be fetched from server in order to preform insert/update
 	schema.tables : the tables that need to be updated 
 */
+
 exports.identifier = {
 		sql: {
-			all: `select identifier.id, identifier.name as identifier, wr.id as name
-					from mymes.identifier as identifier ,mymes.work_report as wr
-					where wr.id = identifier.work_report_id
-					and wr.id = $3 
-					`,					
-
-			choosers :{	
-				
-			}
-
+			all: `select identifier.id, identifier.name as identifier, identifier.id as name 
+			from mymes.identifier as identifier, mymes.identifier_links as il
+			where identifier.id = il.identifier_id
+			and il.parent_id = $3 and row_type = $6`,
+					
+			choosers :{}
 		},
 
 		schema: {
-			pkey: 'parent' ,
+			pkey: 'identifier_id' ,
 
 			fkeys: {			
 
@@ -31,11 +28,7 @@ exports.identifier = {
 
 			tables : {
 				identifier :{
-					fields : [
-						{
-							field: 'work_report_id',
-							variable : 'parent'
-						},					
+					fields : [				
 						{
 							field: 'name',
 							variable : 'identifier'
@@ -44,10 +37,24 @@ exports.identifier = {
 							key: 'id'
 						}
 				   ]
-				}
+				},
+				identifier_links :{
+					fields : [
+						{
+							field: 'parent_id',
+							variable : 'parent'
+						},	
+						{
+							field: 'row_type',
+							variable : 'parent_schema'
+						},										
+						{
+							field: 'identifier_id',
+							fkey :'identifier_id',
+							key : 'id'
+						},											
+				   ]
+				}				
 			}
 		}	
 	}
-
-
-

@@ -91,11 +91,19 @@ const createPDF = async (req, res, next)  => {
   res.end(buffer)
 }
 
+const insertIdentifier = async (req, res, user)  => {
+  const body = req.body
+  console.log("BBBOOODDDY:",body)
+  sql = `select part_id from  mymes.identifier i , mymes.work_report w where i.name = ${body.identifier}  and w.id = i.parent `
+  const ret = await user.authenticate(req,res,() => insert(req,res,getEntity(req.body.entity)))
+  res.status(200).json({inserted:'true'})
+}
+
 app.post('/mymes/signin', User.signin)
 //app.post('/mymes/signup', (req,res) => User.signup(req,res))
 app.post('/mymes/remove', (req,res) => User.authenticate(req,res,() => remove(req,res,getEntity(req.body.entity))))
 app.post('/mymes/update', (req,res) => User.authenticate(req,res,() => update(req,res,getEntity(req.body.entity))))
-app.post('/mymes/insert', (req,res) => req.body.entity === 'user' ? User.signup(req,res) :  User.authenticate(req,res,() => insert(req,res,getEntity(req.body.entity))))
+app.post('/mymes/insert', (req,res) => req.body.entity === 'user' ? User.signup(req,res) : User.authenticate(req,res,() => insert(req,res,getEntity(req.body.entity))))
 app.post('/mymes/func', (req,res) => User.authenticate(req,res,() => func(req,res,getEntity(req.body.entity))))
 
 app.post('/mymes/updateroutes', async (req,res) => {

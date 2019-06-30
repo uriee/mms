@@ -75,7 +75,7 @@ exports.work_report = {
 					 value : 'sig_user'
 				},				
 			},
-
+			chain : ['identifier'],
 			tables : {
 				work_report :{
 					fields : [
@@ -113,28 +113,17 @@ exports.work_report = {
 							filterField : 'username',
 							filterValue: 'username',	
 
-						},																	
+						},
+						{
+							field: 'row_type',
+							variable : 'row_type',
+							value : 'work_report'
+						},																							
 						{
 							key: 'id'
 						}
 				   ]
 				},
-				identifier :{
-					fields : [
-						{
-							field: 'work_report_id',
-							fkey: 'work_report_id',
-							key: 'id'
-						},					
-						{
-							field: 'name',
-							variable : 'identifier'
-						},											
-						{
-							key: 'id'
-						}						
-					],
-				}					
 			}
 		}	
 	}

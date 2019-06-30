@@ -37,6 +37,9 @@ const {repairs} = require('../schemas/repairs.js')
 const {repair_types} = require('../schemas/repair_types.js') 
 const {mnt_plans} = require('../schemas/mnt_plans.js') 
 const {mnt_plan_items} = require('../schemas/mnt_plan_items.js') 
+const {fault} = require('../schemas/fault.js') 
+const {fault_type} = require('../schemas/fault_type.js')
+const {fault_status} = require('../schemas/fault_status.js')
 const {tags} = require('../schemas/tags.js') 
 
 const schemas = {
@@ -73,7 +76,10 @@ const schemas = {
 	locations : locations,
 	work_report : work_report,
 	identifier : identifier,
-	preferences : preferences
+	preferences : preferences,
+	fault_status,
+	fault_type,
+	fault : fault
 }
 
 const fillTemplate = function(templateString, templateVars){
@@ -95,7 +101,7 @@ const fetchByName = (request, response, entity) => {
 }
 
 const fetchTags = async(request, response) =>{
-	const sql = `select * from mymes.tagable
+	const sql = `select id::Integer,name,row_type,tags from mymes.tagable
 					where exists
 					(select * from (select unnest(mymes.tagable.tags)) x(tag) where x.tag like '%${request.query.tags}%');`
 
@@ -182,9 +188,10 @@ const fetchWorkPaths = async(request, response) =>{
 
 const fetchWR = async(request, response) =>{
 	const {serialname,actname} = request.query
-	const sql = `select sig_date, wr.quant, users.username , identifier.name as serial , resources.name as resourcename
+	const WRsql = `select sig_date, wr.quant, users.username , identifier.name as serial , resources.name as resourcename
 	from mymes.resources , mymes.actions , mymes.serials ,users,
-	mymes.work_report wr left join mymes.identifier on wr.id = identifier.work_report_id 
+	mymes.work_report wr left join mymes.identifier_links il on il.parent_id = wr.id 
+	left join mymes.identifier on identifier.id = il.identifier_id
 	where wr.resource_id = resources.id
 	and wr.act_id = actions.id
 	and wr.serial_id = serials.id
@@ -193,9 +200,20 @@ const fetchWR = async(request, response) =>{
 	and actions.name = '${actname}'
 	order by sig_date desc;`
 
+	const locsql = `select loc.location
+	from mymes.locations loc left join mymes.actions act on loc.act_id = act.id, mymes.serials ser
+	where ser.name = '${serialname}'
+	and (act.name  = '${actname}' or loc.act_id is null)
+	and loc.part_id = ser.part_id;`
+
+	const typesql = `select name from mymes.fault_type where active = true;`
+
 	try{
-		const ret =  await db.any(sql).then(x=>x)	
-		response.status(200).json({main:ret})
+		const WR =  await db.any(WRsql).then(x=>x)	
+		const loc = await db.any(locsql).then(x=>x)
+		const type = await db.any(typesql).then(x=>x)
+		console.log({WR,type,loc})
+		response.status(200).json({main:{WR,type,loc}})
 	}catch(e){
 		console.error(e)
 	}
@@ -215,27 +233,32 @@ const fetchNotifications = async(request, response) =>{
 		response.status(200).json(ret)
 	}
 }
+/*****
+/* getField: Enables the schema fields field property to be a Function or a String
+*****/
+const getField = (field,flag) => typeof field === 'function' ? field(flag || 0) : field
+
 /*
 Populate the response data from DB with the requested data of a certain entity
 */
 const fetch = async (request, response, entity) => {
-	const {lang/*pageSize,currentPage*/,zoom,name,parent,user} = request.query
+	const {lang/*pageSize,currentPage*/,zoom,name,parent,user,flag,parentSchema} = request.query
 	const tables = schemas[entity].schema.tables
 	const limit =  schemas[entity].limit || 50
 	const filters = flatten(	
 							Object.keys(tables)
 							.map(table=> tables[table].fields
-								.map(x => ({field : `${x.table || table}.${x.filterField || x.field || x.key}`,value : request.query[x.filterValue || x.field || x.key]}))
+								.map(x => ({field : `${x.table || table}.${x.filterField || getField(x.field) || x.key}`,value : request.query[x.filterValue || getField(x.field) || x.key]}))
 								)
 							).filter(field => field.value)
 	
 	try {
-		const filterSql = filters.reduce((string, filter)=> string+` and UPPER(${filter.field}::text) like '%${filter.value.toString().toUpperCase().replace(/\$/g,"%")}%'` , '')
-		const zoomSql = filters.reduce((string, filter)=> string+` and ${filter.field} = '${filter.value}'`, '')
+		const filterSql = filters.reduce((string, filter)=> string+` and UPPER(${getField(filter.field)}::text) like '%${filter.value.toString().toUpperCase().replace(/\$/g,"%")}%'` , '')
+		const zoomSql = filters.reduce((string, filter)=> string+` and ${getField(filter.field)} = '${filter.value}'`, '')
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
 		const sql = `${schemas[entity].sql.all} ${(zoom === '1' ? zoomSql  : filterSql)} ${(schemas[entity].sql.final || '')} limit ${limit};`
 		console.log("fetch sql:",sql,request.query)
-		const main = await db.any(sql,[lang || '1',name || '',parent || '0' ,user || '']).then(x=>x)
+		const main = await db.any(sql,[lang || '1',name || '',parent || '0' ,user || '',flag || 0,parentSchema || '']).then(x=>x)
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
 		const chooserQueries = Object.values(schemas[entity].sql.choosers)	
 	    const chooserResaults = await Promise.all(chooserQueries.map(choose => db.any(choose,[request.query.lang , request.query.user])))
@@ -293,10 +316,23 @@ const getFkeys = async (fkeys,params) => {
 	return keys;
 }
 
+const insertIdentifier = async (req, res, user)  => {
+	const body = req.body
+	console.log("BBBOOODDDY:",body)
+	sql = `select part_id from  mymes.identifier i , mymes.work_report w where i.name = ${body.identifier}  and w.id = i.parent; `
+	const part_id  = await db.one(sql)
+	var xxx
+	if (part_id) { 
+		sql = `select id from identifier_links where `
+	}
+	const ret = await user.authenticate(req,res,() => insert(req,res,getEntity(req.body.entity)))
+	res.status(200).json({inserted:'true'})
+}
 
 const InsertToTables = async (params,schema) => {
 	const keys = await getFkeys(schema.fkeys,params)
-    const tables = Object.keys(schema.tables)
+	const tables = Object.keys(schema.tables)
+	const chain = schema.chain
 	const isPublic = !!schema.public
 	const id  = schema.pkey
 	var new_id = 0    
@@ -305,13 +341,13 @@ const InsertToTables = async (params,schema) => {
 	const required = tables.reduce(
 		(ret,table) => ret + schema.tables[table].fields.filter(field => field.required).reduce(
 			(o,field)=>{
-			return o + (params[field.field] ? 1 : 0)} , 0) 	,0
+			return o + (params[getField(field.field,params['flag'])] ? 1 : 0)} , 0) 	,0
 		) || 1
 	if(!required) throw new Error('There are some required fields with no value!');
 
 	const maintable = schema.tables[tables[0]]
 	const insertFields = maintable.fields.filter(x => x.field && (x.value || keys[x.fkey]>'' || params[x.variable]))
-	let fields = insertFields.map(x => x.field)
+	let fields = insertFields.map(x => getField(x.field,params['flag']))
 	console.log('Inser5t params',params,insertFields,fields)	
 	let values = insertFields
 				.map(x => {
@@ -330,12 +366,12 @@ const InsertToTables = async (params,schema) => {
 
 	var sqls  = tables.map( tablename => {		
 		const table = schema.tables[tablename]
-		const fields = table.fields.filter(x => x.field).map(x => x.field)
+		const fields = table.fields.filter(x => x.field).map(x => getField(x.field,params['flag']))
 		if (table.hasOwnProperty('fill')) {
 			let field = table.fill.field
 			return table.fill.values.map(val => {	
 				let values = table.fields.filter(x => x.field )
-										 .map(x =>  x.field === field ?
+										 .map(x =>  getField(x.field,params['flag']) === field ?
 										 	 val : x.hasOwnProperty('fkey') ?
 										 	 keys[x.fkey] : `'${params[x.variable+(val === params['lang_id'] || !params[x.variable] ? '' : '_t')]}'`
 										 )
@@ -357,13 +393,15 @@ const InsertToTables = async (params,schema) => {
 	
 	var new_id = await db.tx( async t => {
 		new_key = await t.oneOrNone(mainTableSql)
-		console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',new_key)
 		const c = await Promise.all(sqls.map(sql => t.any(sql,[new_key.id])))
 		return new_key
 	}).catch(error => {
 			console.error(error)
 			throw new Error("Error in inset to tables : ",error)
 	});
+
+	const ChainInsert = chain && chain.map(async (chainSchema) => await insert({body : {...params, parent : new_id.id}}, null , chainSchema , mute = true))
+	
 	return new_id.id
 }
 
@@ -436,13 +474,19 @@ const update = async (req, res, entity) => {
 			allParams[key] =  Array.isArray(value) ? `{${value}}` : value
 			})
 
-		const ret = Promise.all(tableNames.filter(tn => tables[tn].fields.some(field => allParams.hasOwnProperty(field.field)))
+		const ret = Promise.all(tableNames.filter(tn => tables[tn].fields.some(field => allParams.hasOwnProperty(getField(field.field,params['flag']))))
 				  .map(tn =>{
 				  	const table = schema.tables[tn]
-				  	const sets = table.fields.filter(field => allParams.hasOwnProperty(field.field) && (allParams[field.field] || allParams[field.field] === false))
-				  							 .map(field => ({set : field.field, to: allParams[field.field], conv: field.conv }))
+				  	const sets = table.fields.filter(field => {
+							const fname = getField(field.field,params['flag'])
+									return allParams.hasOwnProperty(fname) && (allParams[fname] || allParams[fname] === false)
+										})
+										.map(field => {
+											const fname = getField(field.field,params['flag'])
+											return {set : fname, to: allParams[fname], conv: field.conv }
+										})
 				  	const wheres = table.fields.filter(field => params.hasOwnProperty(field.key))
-				  							   .map(field => ({where : field.field > '' ? field.field : field.key , equals: params[field.key]}))
+				  							   .map(field => ({where : getField(field.field,params['flag']) > '' ? getField(field.field,params['flag']) : field.key , equals: params[field.key]}))
 				  	const sqlSet = sets.reduce((old,set) => old + `"${set.set}" = '${set.to}'${set.conv ? set.conv: ''},`,'').slice(0,-1)
 				  	const sqlWhere = wheres.reduce((old,where) => old + `${where.where} = '${where.equals}' and `,'').slice(0,-5)
 				  	const sql = `update ${!isPublic ? 'mymes.' : ''}${tn} set ${sqlSet} where ${sqlWhere} returning 1;`
@@ -497,7 +541,7 @@ let params = {}
 											    })	
 
    	const ret  = await Promise.all(finalSqls.map(sql => runQuery(sql)))
-
+			console.log("~~~----~~~----~~~:",sql,finalSqls)										
 	const post = post_delete && params.keys && await db.func(post_delete.function, [params.keys])
 											    .then(data => {
 											        console.log(`Return from function - ${post_delete.function} : ${data[0]}`); 
