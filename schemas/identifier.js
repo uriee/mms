@@ -19,6 +19,11 @@ exports.identifier = {
 			choosers :{}
 		},
 
+		pre_delete: {
+			function: 'delete_identifier_link',
+			parameters: ['id','parent','row_type']
+		},		
+
 		schema: {
 			pkey: 'identifier_id' ,
 

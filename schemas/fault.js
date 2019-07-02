@@ -11,16 +11,17 @@ const {languagesArray} = require('./schema_conf.js')
 exports.fault = {
 		sql: {
 			all: `select fault.id, fault.name , fault_t.description,  
-            serial.name as serial_name, status.name as status_name, type.name as type_name ,
-            resource.name as resource_name , 
-            fault.tags, fault.open_date, fault.close_date, fault.quant , users.username as user_name
-            from mymes.fault as fault left join mymes.fault_t as fault_t on fault.id = fault_t.fault_id ,
-            mymes.serials as serial, mymes.resources as resource, mymes.fault_type as type , mymes.fault_status as status , users 
+            serial.name as serialname, status.name as status_name, type.name as type_name ,
+            resource.name as resourcename , act.name as actname , sig_date, 
+            fault.tags, fault.open_date, fault.close_date, fault.quant , users.username as username
+			from mymes.fault as fault left join mymes.fault_t as fault_t on fault.id = fault_t.fault_id
+			left join mymes.fault_type as type on fault_type_id = type.id 
+			left join mymes.fault_status as status on fault_status_id = status.id
+			left join mymes.actions as act on act_id = act.id,
+            mymes.serials as serial, mymes.resources as resource, users 
             where fault.serial_id = serial.id
             and fault.resource_id = resource.id
-            and fault.user_id = users.id
-            and fault_status_id = status.id              
-            and fault_type_id = type.id  
+            and fault.user_id = users.id 
             and fault_t.lang_id = $1 `,
 
 			choosers :{
@@ -49,18 +50,22 @@ exports.fault = {
 				},                
 				serial_id: {
 					query : `select id from mymes.serials where name = $1 and active = true;`,
-					 value : 'serial_name'
-                },
+					 value : 'serialname'
+				},
+				act_id: {
+					query : `select id from mymes.actions where name = $1;`,
+					 value : 'actname'
+				},				
 				resource_id: {
-					query : `select id from mymes.resource_groups where name = $1;`,
-					 value : 'resource_name'
+					query : `select id from mymes.resources where name = $1;`,
+					 value : 'resourcename'
                 },
 				user_id: {
 					query : `select id from users where username = $1;`,
 					 value : 'user'
 				}                                 					
 			},
-
+			chain : ['identifier'],
 			tables : {
 				fault :{
 					fields : [
@@ -69,7 +74,7 @@ exports.fault = {
 							fkey : 'serial_id',
 							table: 'serial',
 							filterField : 'name',
-							filterValue: 'serial_name',								
+							filterValue: 'serialname',								
 						},
 						{
 							field: 'fault_type_id',
@@ -90,15 +95,22 @@ exports.fault = {
 							fkey : 'user_id',
 							table: 'users',
 							filterField : 'username',
-							filterValue: 'user_name',								
+							filterValue: 'username',								
                         },    
 						{
 							field: 'resource_id',
 							fkey : 'resource_id',
 							table: 'resource',
-							filterField : 'resource_name',
-							filterValue: 'resource_name',								
-						},                                                                      						
+							filterField : 'resourcename',
+							filterValue: 'resourcename',								
+						},  
+						{
+							field: 'act_id',
+							fkey : 'act_id',
+							table: 'action',
+							filterField : 'name',
+							filterValue: 'actname',								
+						},						                                                                    						
 						{
 							field: 'name',
 							variable : 'name'
@@ -116,8 +128,12 @@ exports.fault = {
 							variable : 'quant'
 						},
 						{
-							"field": "tags",
-							"variable" : "tags"
+							field: 'sig_date',
+							variable : 'sig_date'
+						},						
+						{
+							field: "tags",
+							variable : "tags"
 						},	
 						{
 							field: 'row_type',

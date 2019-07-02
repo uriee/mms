@@ -188,7 +188,7 @@ const fetchWorkPaths = async(request, response) =>{
 
 const fetchWR = async(request, response) =>{
 	const {serialname,actname} = request.query
-	const WRsql = `select sig_date, wr.quant, users.username , identifier.name as serial , resources.name as resourcename
+	const WRsql = `select sig_date, wr.quant, users.username , identifier.name as serial , resources.name as resourcename , wr.row_type
 	from mymes.resources , mymes.actions , mymes.serials ,users,
 	mymes.work_report wr left join mymes.identifier_links il on il.parent_id = wr.id 
 	left join mymes.identifier on identifier.id = il.identifier_id
@@ -196,6 +196,17 @@ const fetchWR = async(request, response) =>{
 	and wr.act_id = actions.id
 	and wr.serial_id = serials.id
 	and users.id = wr.sig_user
+	and serials.name = '${serialname}'
+	and actions.name = '${actname}'
+	UNION 
+	select sig_date, wr.quant, users.username , identifier.name as serial , resources.name as resourcename, wr.row_type
+	from mymes.resources , mymes.serials ,users,
+	mymes.fault wr left join mymes.identifier_links il on il.parent_id = wr.id 
+	left join mymes.identifier on identifier.id = il.identifier_id
+	left join mymes.actions  on actions.id = wr.act_id	
+	where wr.resource_id = resources.id
+	and wr.serial_id = serials.id
+	and users.id = wr.user_id
 	and serials.name = '${serialname}'
 	and actions.name = '${actname}'
 	order by sig_date desc;`
@@ -212,7 +223,6 @@ const fetchWR = async(request, response) =>{
 		const WR =  await db.any(WRsql).then(x=>x)	
 		const loc = await db.any(locsql).then(x=>x)
 		const type = await db.any(typesql).then(x=>x)
-		console.log({WR,type,loc})
 		response.status(200).json({main:{WR,type,loc}})
 	}catch(e){
 		console.error(e)
@@ -258,7 +268,7 @@ const fetch = async (request, response, entity) => {
 		//const pageSql = pageSize ? ` offset ${(currentPage - 1) * pageSize} ` : ''
 		const sql = `${schemas[entity].sql.all} ${(zoom === '1' ? zoomSql  : filterSql)} ${(schemas[entity].sql.final || '')} limit ${limit};`
 		console.log("fetch sql:",sql,request.query)
-		const main = await db.any(sql,[lang || '1',name || '',parent || '0' ,user || '',flag || 0,parentSchema || '']).then(x=>x)
+		const main = await db.any(sql,[lang || '1',name || '',parent || '0' ,user || '',flag || 0,parentSchema || entity]).then(x=>x)
 		const chooserId = Object.keys(schemas[entity].sql.choosers)
 		const chooserQueries = Object.values(schemas[entity].sql.choosers)	
 	    const chooserResaults = await Promise.all(chooserQueries.map(choose => db.any(choose,[request.query.lang , request.query.user])))
@@ -271,7 +281,8 @@ const fetch = async (request, response, entity) => {
 	    response.status(200).json(ret)
 	    return ret
 		} catch(err) {
-			response.status(403).json(err)
+			console.error(err)
+			response.status(406).json(err)
 		}
 }
 
@@ -285,6 +296,7 @@ const runQuery = async (query) => {
 }
 
 const getFkeys = async (fkeys,params) => {
+
 	const keys = {}
 	try{
 		const fkeysNames = Object.keys(fkeys)
@@ -296,7 +308,8 @@ const getFkeys = async (fkeys,params) => {
 			const parameters = Array.isArray(query.value) ? 
 				query.value.map(value =>  Array.isArray(params[value]) ? params[value].toString() :	params[value]) :
 				Array.isArray(params[query.value]) ? params[query.value].toString() :[params[query.value]]
-
+			
+				console.log('********************************************',params[query.value],query)
 			var res = query.hasOwnProperty('query') ?
 						await db.any(query.query, parameters).then(x => Array.isArray(x)? x.map(x=> x.id) : x.id) :
 					    params[query.value]
@@ -525,8 +538,7 @@ let params = {}
 	const key = schema.tables[table].fields.filter(x =>  x.key)[0].key
 	const {pre_delete, post_delete} = schemas[entity]
 
-	/* cascading delete is preformed by DB foreign keys constraints*
-	/*tables = pre_delete && pre_delete.tables ? [...tables, ...pre_delete.tables] : tables*/
+	/* cascading delete is preformed by DB foreign keys constraints*/
 	const sql = `delete from ${!isPublic ? 'mymes.' : ''}${table} where ${key} = `
 	const finalSqls	 = params.keys && sql && params.keys.reduce((o,x) => {
 															//o.push(sql + x + ' returning 1;')
@@ -535,13 +547,13 @@ let params = {}
 														,[])
 
 	try {
-	const pre = pre_delete && pre_delete.function && params.keys && await db.func(pre_delete.function, [params.keys])
+	const pre = pre_delete && pre_delete.function && params.keys && await db.func(pre_delete.function, [params.keys,[params.parent,params.parent_schema]])
 											    .then(data => {
-											        console.log(`Return from function - ${pre_delete.function} : ${data[0]}`); 
+											        console.log(`Return from function - ${pre_delete.function} : ${data}`); 
 											    })	
-
+	//console.log("~~~----~~~----~~~:",sql,finalSqls,pre)		
    	const ret  = await Promise.all(finalSqls.map(sql => runQuery(sql)))
-			console.log("~~~----~~~----~~~:",sql,finalSqls)										
+								
 	const post = post_delete && params.keys && await db.func(post_delete.function, [params.keys])
 											    .then(data => {
 											        console.log(`Return from function - ${post_delete.function} : ${data[0]}`); 
