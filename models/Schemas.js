@@ -377,7 +377,7 @@ const InsertToTables = async (params,schema) => {
 	new_id = keys[id] = '$1'
 	tables.shift()
 
-	var sqls  = tables.map( tablename => {		
+	var sqls  = flatten(tables.map( tablename => {		
 		const table = schema.tables[tablename]
 		const fields = table.fields.filter(x => x.field).map(x => getField(x.field,params['flag']))
 		if (table.hasOwnProperty('fill')) {
@@ -400,7 +400,7 @@ const InsertToTables = async (params,schema) => {
 			let sql = `insert into ${!isPublic ? 'mymes.' : ''}${tablename}(${fields}) values(${values}) returning *;`	
 			return checkValues.every(x=>x) ? sql : null
 		}
-	}).filter(x=>x).flat()
+	}).filter(x=>x))
 
 	console.log("main : ",mainTableSql," sqls : ", sqls)	
 	
