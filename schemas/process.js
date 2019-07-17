@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.process = {
 		sql: {
-			all: `select process.id, process.name, process.tags, process_t.description, process.active, process.erpproc, process.serial_report 
+			all: `select process.id, process.name, process.tags, process_t.description, process.active, process.erpproc 
 					from mymes.process as process left join mymes.process_t as process_t on process.id = process_t.process_id 
 					where process_t.lang_id = $1 `,					
 
@@ -42,11 +42,7 @@ exports.process = {
 						{
 							field: 'erpproc',
 							variable : 'erpproc'
-						},
-						{
-							field: 'serial_report',
-							variable : 'serial_report'
-						},												
+						},											
 						{
 							field: 'row_type',
 							variable : 'row_type',

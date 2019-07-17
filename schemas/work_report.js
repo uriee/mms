@@ -42,7 +42,7 @@ exports.work_report = {
 		},
 
 		pre_insert: {
-			function: 'check_serial_act_balance',
+			function: 'check_serial_act',
 			parameters: ['serialname','actname','quant']
 		},
 		post_insert: {
