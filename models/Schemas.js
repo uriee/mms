@@ -21,6 +21,7 @@ const {identifier} = require('../schemas/identifier.js')
 const {proc_act} = require('../schemas/proc_act.js') 
 const {serial_act} = require('../schemas/serial_act.js') 
 const {preferences} = require('../schemas/preferences.js') 
+const {numerators} = require('../schemas/numerators.js')
 const {departments} = require('../schemas/departments.js')
 const {users} = require('../schemas/users.js')
 const {profiles} = require('../schemas/profiles.js')
@@ -40,7 +41,6 @@ const {mnt_plan_items} = require('../schemas/mnt_plan_items.js')
 const {fault} = require('../schemas/fault.js') 
 const {fault_type} = require('../schemas/fault_type.js')
 const {fault_status} = require('../schemas/fault_status.js')
-const {tags} = require('../schemas/tags.js') 
 
 const schemas = {
 	employees : employees,
@@ -77,6 +77,7 @@ const schemas = {
 	work_report : work_report,
 	identifier : identifier,
 	preferences : preferences,
+	numerators,
 	fault_status,
 	fault_type,
 	fault : fault
@@ -167,7 +168,7 @@ const fetchRoutes = async(request, response) =>{
 
 const fetchWorkPaths = async(request, response) =>{
 	const {user} = request.query
-	const sql = `select r.name as resourcename,serial.name as serialname,act.name as actname ,seract.balance , seract.quant
+	const sql = `select r.name as resourcename,serial.name as serialname,act.name as actname ,seract.balance , seract.quant , seract.quantitative , seract.serialize 
 	from mymes.actions as act,
 	mymes.serials as serial , mymes.serial_act as seract
 	join mymes.act_resources as ar on (ar.act_id = seract.id and type = 3)
@@ -329,18 +330,6 @@ const getFkeys = async (fkeys,params) => {
 	return keys;
 }
 
-const insertIdentifier = async (req, res, user)  => {
-	const body = req.body
-	console.log("BBBOOODDDY:",body)
-	sql = `select part_id from  mymes.identifier i , mymes.work_report w where i.name = ${body.identifier}  and w.id = i.parent; `
-	const part_id  = await db.one(sql)
-	var xxx
-	if (part_id) { 
-		sql = `select id from identifier_links where `
-	}
-	const ret = await user.authenticate(req,res,() => insert(req,res,getEntity(req.body.entity)))
-	res.status(200).json({inserted:'true'})
-}
 
 const InsertToTables = async (params,schema) => {
 	const keys = await getFkeys(schema.fkeys,params)
@@ -406,7 +395,7 @@ const InsertToTables = async (params,schema) => {
 	
 	var new_id = await db.tx( async t => {
 		new_key = await t.oneOrNone(mainTableSql)
-		const c = await Promise.all(sqls.map(sql => t.any(sql,[new_key.id])))
+		const c = new_key && await Promise.all(sqls.map(sql => t.any(sql,[new_key.id])))
 		return new_key
 	}).catch(error => {
 			console.error(error)
@@ -415,7 +404,7 @@ const InsertToTables = async (params,schema) => {
 
 	const ChainInsert = chain && chain.map(async (chainSchema) => await insert({body : {...params, parent : new_id.id}}, null , chainSchema , mute = true))
 	
-	return new_id.id
+	return new_id && new_id.id
 }
 
 const insert = async (req, res, entity , mute = false) => {
@@ -739,16 +728,28 @@ const exportWorkReport = async (req,res) => {
 				and erpact is not null
 				and (sent is null or sent is false);`
 	try{
-		lines = await db.any(sql)
+		var lines = await db.any(sql)
+
+		lines = await Promise.all(lines.map( async w => {
+			const idsql = `select i.id,i.name from mymes.identifier i, mymes.identifier_links il
+						   where i.id = il.identifier_id
+						   and il.parent_id = ${w.id};`			
+			const iden = await db.any(idsql)
+			const identifiers = iden.map( id => ({id: id.id, name: id.name}))
+			return {...w, identifiers}
+		}))
+		
 		const data = {
 			date : date,
 			data: lines
 		}
 
 		if (lines.length) {
+
 			res.status(200).json(data)
 		
 			const ids = lines.map(x=>x.id).toString()
+
 			sql = `update mymes.work_report
 				set sent = true
 				where id = any (ARRAY[${ids}]) returning 1`

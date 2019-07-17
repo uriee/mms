@@ -37,7 +37,11 @@ exports.identifier = {
 						{
 							field: 'name',
 							variable : 'identifier'
-						},											
+						},
+						{
+							field: 'serial_id',
+							variable : 'parent'
+						},																	
 						{
 							key: 'id'
 						}
