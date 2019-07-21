@@ -14,7 +14,8 @@ exports.parts = {
 					from mymes.part as part left join mymes.part_t as part_t on part.id = part_t.part_id, 
 					mymes.part_status 
 					where part_status.id = part.part_status_id 
-					and part_t.lang_id = $1 `,					
+					and part_t.lang_id = $1 `,
+			final : ' order by name desc ',										
 
 			choosers :{
 				part_status: `select name from mymes.part_status;`

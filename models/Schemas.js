@@ -18,6 +18,7 @@ const {kit} = require('../schemas/kit.js')
 const {bom} = require('../schemas/bom.js') 
 const {iden} = require('../schemas/iden.js') 
 const {identifier} = require('../schemas/identifier.js') 
+const {identifier_links} = require('../schemas/identifier_links.js') 
 const {proc_act} = require('../schemas/proc_act.js') 
 const {serial_act} = require('../schemas/serial_act.js') 
 const {preferences} = require('../schemas/preferences.js') 
@@ -43,40 +44,41 @@ const {fault_type} = require('../schemas/fault_type.js')
 const {fault_status} = require('../schemas/fault_status.js')
 
 const schemas = {
-	employees : employees,
-	parts : parts,
-	departments : departments,
-	users : users,
-	profiles : profiles,
-	equipments: equipments,
-	resource_groups : resource_groups,
-	resources : resources,	
-	availability_profiles : availability_profiles,
-	availabilities : availabilities,
-	resource_timeoff : resource_timeoff,	
-	employee_timeoff : employee_timeoff,		
-	malfunctions : malfunctions,
-	malfunction_types : malfunction_types,
-	repairs : repairs,
-	repair_types : repair_types,
-	mnt_plans : mnt_plans,
-	mnt_plan_items : mnt_plan_items,
-	serials : serials, 
-	serial_statuses : serial_statuses,
-	part_status : part_status,	
-	act_resources: act_resources, 	
-	actions : actions,
-	positions : positions,	
-	process : process,
-	proc_act: proc_act,
-	serial_act: serial_act,	
-	kit : kit,
-	bom : bom,
-	iden : iden,
-	locations : locations,
-	work_report : work_report,
-	identifier : identifier,
-	preferences : preferences,
+	employees ,
+	parts ,
+	departments ,
+	users ,
+	profiles ,
+	equipments,
+	resource_groups ,
+	resources ,	
+	availability_profiles ,
+	availabilities ,
+	resource_timeoff ,	
+	employee_timeoff ,		
+	malfunctions ,
+	malfunction_types ,
+	repairs ,
+	repair_types,
+	mnt_plans  ,
+	mnt_plan_items  ,
+	serials , 
+	serial_statuses,
+	part_status,	
+	act_resources, 	
+	actions ,
+	positions ,	
+	process ,
+	proc_act,
+	serial_act,	
+	kit ,
+	bom ,
+	iden ,
+	locations ,
+	work_report ,
+	identifier,
+	identifier_links, 
+	preferences ,
 	numerators,
 	fault_status,
 	fault_type,
@@ -168,13 +170,15 @@ const fetchRoutes = async(request, response) =>{
 
 const fetchWorkPaths = async(request, response) =>{
 	const {user} = request.query
-	const sql = `select r.name as resourcename,serial.name as serialname,act.name as actname ,seract.balance , seract.quant , seract.quantitative , seract.serialize 
-	from mymes.actions as act,
-	mymes.serials as serial , mymes.serial_act as seract
+	const sql = `select r.name as resourcename,serial.name as serialname,act.name as actname ,seract.balance , seract.quant , seract.quantitative ,
+	seract.serialize and part.serialize as serialize 
+	from mymes.actions as act, mymes.part as part, 
+	mymes.serials as serial , mymes.serial_act as seract 
 	join mymes.act_resources as ar on (ar.act_id = seract.id and type = 3)
 	join mymes.resources as r on r.id = ar.resource_id 
 	where serial.id = seract.serial_id and act.id = seract.act_id 
 	and serial.active=true and act.active=true
+	and part.id = serial.part_id
 	and r.id in (select resource from user_parent_resources('${user}'))
 	and seract.balance > 0 
 	order by serial.name,seract.pos;`
@@ -399,7 +403,7 @@ const InsertToTables = async (params,schema) => {
 		return new_key
 	}).catch(error => {
 			console.error(error)
-			throw new Error("Error in inset to tables : ",error)
+			throw new Error(error)
 	});
 
 	const ChainInsert = chain && chain.map(async (chainSchema) => await insert({body : {...params, parent : new_id.id}}, null , chainSchema , mute = true))
@@ -416,18 +420,29 @@ const insert = async (req, res, entity , mute = false) => {
 	const schema = schemas[entity].schema
 	const pre_insert = schemas[entity].pre_insert	
 
-	try{						
+	try{				
 		const parameters = pre_insert && pre_insert.parameters.map(x => params[x])
 		const pre = pre_insert && parameters && await db.func(pre_insert.function, parameters)
 											    .then(data => {
-											        console.log(`Return from function - ${pre_insert.function} : ${data}`); 
-											    })									    
+													console.log(`Return from function - ${pre_insert.function} : ${data}`); 
+													return data[0]
+												})
+												.catch(error => {
+											        console.error('ERROR:', error); 
+											        throw new Error(error)
+											    });
+		//console.log("pre_insert   :   :  :  : ",pre_insert && pre[pre_insert.function])
+		if (pre_insert && pre[pre_insert.function] === -1) {
+			res.status(200).json({pass: true})
+			return
+		}
+
 		}catch(err) {
 			console.error("pre_insert:",err)
 			if (!mute) res.status(406).json({error: 'pre_insert : '+err})
 			throw new Error("PreInsert fault")
 		}
-
+	
 	try{											    
 		const new_id = await InsertToTables(params,schema)
 		if (!mute) res.status(201).json(new_id)
@@ -446,7 +461,7 @@ const insert = async (req, res, entity , mute = false) => {
 		return new_id											    
 	} catch(err) {
 		console.error("error in Insert:",err)
-		if (!mute) res.status(406).json({error: err})
+		if (!mute)res.status(406).json({error: 'insert : '+err})
 		throw new Error("Insert fault :" + err.toString())
 	}
 }
@@ -513,7 +528,7 @@ const update = async (req, res, entity) => {
 		return
 	} catch(err) {
 		console.log(err)
-		res.status(406).json({error:err})
+		res.status(406).json({error: 'insert : '+err})
 	}
 }
 
@@ -564,7 +579,7 @@ const func = async (req, res, entity) => {
 		return 
 	} catch(err) {
 		console.error(err)
-		res.status(406).json({error:err})
+		res.status(406).json({error: 'function : '+err})		
 	}
 
 }
@@ -590,7 +605,7 @@ const batchInsert = async (req,res,entity) => {
 		res.status(200).json({inserted:ret})
 	}catch(err){
 		console.error("Error in batchInsert",err)
-		res.status(406).json({error:err})
+		res.status(406).json({error: 'BatchInsert : '+err})		
 	}	
 }
 
@@ -709,7 +724,7 @@ const approveWorkReports = async (req,res) => {
 		res.status(200).json(lines)
 	}catch(e){
 		console.error("error in approveWorkReport : ",e)
-		res.status(406).json({error : e})
+		res.status(406).json({error: 'approveWorkReports : ' + e})		
 	}
 }
 
@@ -826,9 +841,9 @@ const importSerial = (req,res) => {
 				let procName = ''
 				if(!process.id) {
 					serial.SERACT = await Promise.all(serial.SERACT && serial.SERACT.map(async (x) => {
-						const sql = `select id,name from mymes.actions where erpact = '${x.ACTNAME}';`
+						const sql = `select id,name,serialize,quantitative from mymes.actions where erpact = '${x.ACTNAME}';`
 						const act = await db.one(sql)
-						return {act_name: act.name, pos : x.POS}
+						return {act_name: act.name, pos : x.POS, serialize : act.serialize, quantitative : act.quantitative}
 					})).then(actions => actions,e => null)
 
 					if (serial.SERACT) {

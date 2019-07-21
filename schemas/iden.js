@@ -10,13 +10,8 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.iden = {
 		sql: {
-			all: `select iden.id, iden.name ,serial.name as serial_name, action.name as act_name , username as user_name, wr.sig_date
-				from mymes.identifier iden, mymes.serials as serial, mymes.actions as action, mymes.work_report as wr , users
-				where wr.serial_id = serial.id
-				and wr.act_id =  action.id
-				and wr.sig_user = users.id
-				and iden.work_report_id = wr.id
-				and ($3 = 0 or serial.id = $3) `,
+			all: `select id,name, created_at from mymes.identifier as iden where 1=1  `	,		
+			final: ` order by created_at desc `,
 
 			choosers :{
 			

@@ -11,7 +11,7 @@ const {languagesArray} = require('./schema_conf.js')
 
 exports.identifier = {
 		sql: {
-			all: `select identifier.id, identifier.name as identifier, identifier.id as name 
+			all: `select identifier.id, identifier.name as identifier, identifier.id as name , il.serial_id, il.act_id 
 			from mymes.identifier as identifier, mymes.identifier_links as il
 			where identifier.id = il.identifier_id
 			and il.parent_id = $3 and row_type = $6`,
@@ -22,7 +22,15 @@ exports.identifier = {
 		pre_delete: {
 			function: 'delete_identifier_link',
 			parameters: ['id','parent','row_type']
-		},		
+		},	
+		pre_insert: {
+			function: 'insert_identifier_link_pre',
+			parameters: ['parent','parent_schema','identifier']
+		},	
+		post_insert: {
+			function: 'insert_identifier_link_post',
+			parameters: ['parent','parent_schema','identifier']
+		},				
 
 		schema: {
 			pkey: 'identifier_id' ,
@@ -39,14 +47,14 @@ exports.identifier = {
 							variable : 'identifier'
 						},
 						{
-							field: 'serial_id',
+							field: 'parent_id',
 							variable : 'parent'
 						},																	
 						{
 							key: 'id'
 						}
 				   ]
-				},
+				},/*
 				identifier_links :{
 					fields : [
 						{
@@ -56,14 +64,23 @@ exports.identifier = {
 						{
 							field: 'row_type',
 							variable : 'parent_schema'
-						},										
+						},
+						{
+							field: 'serial_id',
+							variable : 'serial_id'
+						},	
+						{
+							field: 'act_id',
+							variable : 'act_id'
+						},																	
 						{
 							field: 'identifier_id',
 							fkey :'identifier_id',
 							key : 'id'
 						},											
 				   ]
-				}				
+				}
+				*/				
 			}
 		}	
 	}

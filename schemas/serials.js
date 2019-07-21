@@ -19,7 +19,8 @@ exports.serials = {
 					mymes.serial_statuses as serial_statuses, mymes.part as part 
 					where part.id = serials.part_id
 					and serial_statuses.id = serials.status
-					and serials_t.lang_id = $1 `,					
+					and serials_t.lang_id = $1 `,	
+			final : ' order by name desc ',										
 
 			choosers :{	
 				status: `select name from mymes.serial_statuses;`,

@@ -21,8 +21,10 @@ exports.fault = {
             mymes.serials as serial, mymes.resources as resource, users 
             where fault.serial_id = serial.id
             and fault.resource_id = resource.id
-            and fault.user_id = users.id 
-            and fault_t.lang_id = $1 `,
+            and fault.sig_user = users.id 
+			and fault_t.lang_id = $1 `,
+			
+			final : ' order by name desc ',				
 
 			choosers :{
                 fault_type: `select name from mymes.fault_type where active = true;`,
@@ -32,6 +34,10 @@ exports.fault = {
 			},
 
 		},
+		pre_insert: {
+			function: 'check_identifier_exists',
+			parameters: ['serialname','actname','entity','identifier']
+		},		
 
 		schema: {
 			pkey: 'fault_id' ,
@@ -60,7 +66,7 @@ exports.fault = {
 					query : `select id from mymes.resources where name = $1;`,
 					 value : 'resourcename'
                 },
-				user_id: {
+				sig_user: {
 					query : `select id from users where username = $1;`,
 					 value : 'user'
 				}                                 					
@@ -91,8 +97,8 @@ exports.fault = {
 							filterValue: 'status',								
                         },   
 						{
-							field: 'user_id',
-							fkey : 'user_id',
+							field: 'sig_user',
+							fkey : 'sig_user',
 							table: 'users',
 							filterField : 'username',
 							filterValue: 'username',								

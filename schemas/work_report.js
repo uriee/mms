@@ -42,9 +42,10 @@ exports.work_report = {
 		},
 
 		pre_insert: {
-			function: 'check_serial_act',
-			parameters: ['serialname','actname','quant']
+			function: 'check_identifier_exists',
+			parameters: ['serialname','actname','entity','identifier']
 		},
+		
 		post_insert: {
 			function: 'update_serial_act_balance',
 			parameters: ['serialname','actname','quant']

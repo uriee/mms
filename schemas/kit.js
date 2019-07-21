@@ -21,6 +21,7 @@ exports.kit = {
 			}
 
 		},
+		limit : 5000,		
 
 		schema: {
 			pkey: 'serial_id' ,
