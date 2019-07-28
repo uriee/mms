@@ -11,7 +11,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.fault_type = {
 		sql: {
-			all: `select fault_type.id, fault_type.name, fault_type.tags, fault_type_t.description ,active
+			all: `select fault_type.id, fault_type.name, fault_type.tags, fault_type_t.description ,active , extname 
 				  	from mymes.fault_type as fault_type left join mymes.fault_type_t as fault_type_t on fault_type.id = fault_type_t.fault_type_id
 					where fault_type_t.lang_id = $1 `,					
 
@@ -50,6 +50,10 @@ exports.fault_type = {
 							field: 'active',
 							variable : 'active'
 						},
+						{
+							field: 'extname',
+							variable : 'extname'
+						},						
 						{
 							key: 'id'
 						}

@@ -12,12 +12,13 @@ exports.fault = {
 		sql: {
 			all: `select fault.id, fault.name , fault_t.description,  
             serial.name as serialname, status.name as status_name, type.name as type_name ,
-            resource.name as resourcename , act.name as actname , sig_date, 
+            resource.name as resourcename , act.name as actname , sig_date, l.location as location, 
             fault.tags, fault.open_date, fault.close_date, fault.quant , users.username as username
 			from mymes.fault as fault left join mymes.fault_t as fault_t on fault.id = fault_t.fault_id
 			left join mymes.fault_type as type on fault_type_id = type.id 
 			left join mymes.fault_status as status on fault_status_id = status.id
-			left join mymes.actions as act on act_id = act.id,
+			left join mymes.actions as act on act_id = act.id
+			left join mymes.locations as l on location_id = l.id,
             mymes.serials as serial, mymes.resources as resource, users 
             where fault.serial_id = serial.id
             and fault.resource_id = resource.id
@@ -27,7 +28,7 @@ exports.fault = {
 			final : ' order by name desc ',				
 
 			choosers :{
-                fault_type: `select name from mymes.fault_type where active = true;`,
+                fault_type: `select name,description from mymes.fault_type f,mymes.fault_type_t t where active = true and f.id = t.fault_type_id and t.lang_id = $1;`,
                 fault_status: `select name from mymes.fault_status where active = true;`,
                 resource: `select name from mymes.resource_groups where active = true;`,
 				serial: `select name from mymes.serials where active = true;`,
@@ -65,7 +66,11 @@ exports.fault = {
 				resource_id: {
 					query : `select id from mymes.resources where name = $1;`,
 					 value : 'resourcename'
-                },
+				},
+				location_id: {
+					query : `select l.id from mymes.locations l, mymes.serials s where l.location = $1 and s.part_id = l.part_id and s.name = $2;`,
+					 value : ['location','serialname']
+				},				
 				sig_user: {
 					query : `select id from users where username = $1;`,
 					 value : 'user'
@@ -116,7 +121,14 @@ exports.fault = {
 							table: 'action',
 							filterField : 'name',
 							filterValue: 'actname',								
-						},						                                                                    						
+						},
+						{
+							field: 'location_id',
+							fkey : 'location_id',
+							table: 'locations',
+							filterField : 'location',
+							filterValue: 'location',								
+						},												                                                                    						
 						{
 							field: 'name',
 							variable : 'name'

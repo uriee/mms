@@ -13,6 +13,53 @@ const bugInsert = async (req, res) => {
 		return 0
 }
 
+/***
+* get notification id and username 
+* marks the notification as read if username = notification.user
+****/
+const markNotificationAsRead = async (req,res) => {
+	var data = {}
+	try {
+		data = req.body
+	}catch(e){
+		res.status(406).json({})
+	}
+	const {id,user} = data
+
+	let sql = `update mymes.notifications
+				set read = true
+				where id = ${id} and username = '${user}'`
+
+	try{
+		res.status(200).json(await db.one(sql))
+	}catch(e){
+		console.error("error in markNotificationAsRead : ",e)
+		res.status(200).json({error : e})
+	}
+}
+
+const changeUserLang = async (req,res) => {
+	var data = {}
+	try {
+		data = req.body
+	}catch(e){
+		res.status(406).json({})
+	}
+	const {locale,user} = data
+	
+	let sql = `update users
+				set locale = '${locale}'
+				where username = '${user}'`
+	try{
+		res.status(200).json(await db.one(sql))
+	}catch(e){
+		console.error("error in changeUserLang : ",e)
+		res.status(200).json({error : e})
+	}
+}
+
 module.exports = {
-  bugInsert
+  bugInsert,
+  changeUserLang,
+  markNotificationAsRead  
 }

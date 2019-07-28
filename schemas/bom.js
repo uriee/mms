@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.bom = {
 		sql: {
-			all: `select bom.id, bom.partname, bom.coef 
+			all: `select bom.id, bom.partname, bom.coef ,bom.produce
 					from mymes.bom as bom ,mymes.part as part 
 					where part.id = bom.parent_id
 					and part.id = $3 
@@ -47,7 +47,11 @@ exports.bom = {
 						{
 							field: 'coef',
 							variable : 'coef'
-						},											
+						},	
+						{
+							field: 'produce',
+							variable : 'produce'
+						},																
 						{
 							key: 'id'
 						}
