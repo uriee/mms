@@ -85,22 +85,28 @@ const schemas = {
 	fault : fault
 }
 
+/*
 const fillTemplate = function(templateString, templateVars){
 	
     return new Function("return `"+templateString +"`;").call(templateVars);
 }
+*/
 
-//fetches Employee data from db 
-const fetchByName = (request, response, entity) => {
-	const param = request.body
+const postInsertHelpers = {
 
-  	return db.one(schemas[entity].sql.single
-				, [param.name,param.lang]
-				).then((emp) => response.status(200).json({ emp }))
- 				 .catch((err) => {
-      				response.status(401).json(user)
-      				console.error(err)
-    			})
+	updateParentIdentifiers : async (id,son_identifers) => {
+		console.log("~~~1:",id,son_identifers)
+		return await son_identifers.map(async (obj) => {
+			const parent = Object.keys(obj)[0]
+			const identifier = obj[parent]
+			const sql = `update mymes.identifier
+						 set parent_identifier_id = ${id}
+						 where name = '${identifier}'
+						 and parent_id = (select id from mymes.part where name = '${parent}') returning 1;`
+						 console.log("~~~2:",sql,parent,identifier,id)						 
+			return await db.one(sql)
+		})
+	},
 }
 
 const fetchTags = async(request, response) =>{
@@ -163,72 +169,6 @@ const fetchRoutes = async(request, response) =>{
 	try{
 		const ret =  await db.any(sql).then(x=>x)	
 		response.status(200).json({main:ret})
-	}catch(e){
-		console.error(e)
-	}
-}
-
-const fetchWorkPaths = async(request, response) =>{
-	const {user} = request.query
-	const sql = `select r.name as resourcename,serial.name as serialname,act.name as actname ,seract.balance , seract.quant , seract.quantitative ,
-	seract.serialize and part.serialize as serialize 
-	from mymes.actions as act, mymes.part as part, 
-	mymes.serials as serial , mymes.serial_act as seract 
-	join mymes.act_resources as ar on (ar.act_id = seract.id and type = 3)
-	join mymes.resources as r on r.id = ar.resource_id 
-	where serial.id = seract.serial_id and act.id = seract.act_id 
-	and serial.active=true and act.active=true
-	and part.id = serial.part_id
-	and r.id in (select resource from user_parent_resources('${user}'))
-	and seract.balance > 0 
-	order by serial.name,seract.pos;`
-
-	try{
-		const ret =  await db.any(sql).then(x=>x)	
-		response.status(200).json({main:ret})
-	}catch(e){
-		console.error(e)
-	}
-}
-
-const fetchWR = async(request, response) =>{
-	const {serialname,actname} = request.query
-	const WRsql = `select sig_date, wr.quant, users.username , identifier.name as serial , resources.name as resourcename , wr.row_type
-	from mymes.resources , mymes.actions , mymes.serials ,users,
-	mymes.work_report wr left join mymes.identifier_links il on il.parent_id = wr.id 
-	left join mymes.identifier on identifier.id = il.identifier_id
-	where wr.resource_id = resources.id
-	and wr.act_id = actions.id
-	and wr.serial_id = serials.id
-	and users.id = wr.sig_user
-	and serials.name = '${serialname}'
-	and actions.name = '${actname}'
-	UNION 
-	select sig_date, wr.quant, users.username , identifier.name as serial , resources.name as resourcename, wr.row_type
-	from mymes.resources , mymes.serials ,users,
-	mymes.fault wr left join mymes.identifier_links il on il.parent_id = wr.id 
-	left join mymes.identifier on identifier.id = il.identifier_id
-	left join mymes.actions  on actions.id = wr.act_id	
-	where wr.resource_id = resources.id
-	and wr.serial_id = serials.id
-	and users.id = wr.user_id
-	and serials.name = '${serialname}'
-	and actions.name = '${actname}'
-	order by sig_date desc;`
-
-	const locsql = `select loc.location
-	from mymes.locations loc left join mymes.actions act on loc.act_id = act.id, mymes.serials ser
-	where ser.name = '${serialname}'
-	and (act.name  = '${actname}' or loc.act_id is null)
-	and loc.part_id = ser.part_id;`
-
-	const typesql = `select name from mymes.fault_type where active = true;`
-
-	try{
-		const WR =  await db.any(WRsql).then(x=>x)	
-		const loc = await db.any(locsql).then(x=>x)
-		const type = await db.any(typesql).then(x=>x)
-		response.status(200).json({main:{WR,type,loc}})
 	}catch(e){
 		console.error(e)
 	}
@@ -307,6 +247,7 @@ const getFkeys = async (fkeys,params) => {
 		const fkeysNames = Object.keys(fkeys)
 		const keyValues = await Promise.all(fkeysNames.map(async (key) => {
 			const query = fkeys[key]
+			console.log('********************************************0',key)
 	
 			/*const parameter = Array.isArray(params[query.value]) ? params[query.value].toString() :
 								[params[query.value]]*/
@@ -457,8 +398,15 @@ const insert = async (req, res, entity , mute = false) => {
 											    .catch(error => {
 											        console.error('ERROR:', error); 
 											        throw new Error("PostInsert fault")
-											    });
-		return new_id											    
+												});
+							
+		const pih = schemas[entity].postInsertHelpers &&  schemas[entity].postInsertHelpers.map(async PIH => {
+			const PIHparameters = PIH && PIH.parameters.map(x => params[x])
+			return PIH && PIHparameters && await postInsertHelpers[PIH.functionName](new_id,PIHparameters)
+		})
+
+		return new_id	
+
 	} catch(err) {
 		console.error("error in Insert:",err)
 		if (!mute)res.status(406).json({error: 'insert : '+err})
@@ -474,7 +422,7 @@ const update = async (req, res, entity) => {
 	const tables= schema.tables
 	const tableNames  = Object.keys(tables)
 	let  fkSchema = {}
-	const fkeysNames = Object.keys(schema.fkeys).filter(key => schema.fkeys[key].value in params)
+	const fkeysNames = Object.keys(schema.fkeys).filter(key => schema.fkeys[key].value in params || (schema.fkeys[key].value && (schema.fkeys[key].value)[0] in params))
 	fkeysNames.map((key) => {
 			fkSchema[key] = schema.fkeys[key]
 		})
@@ -658,247 +606,9 @@ const batchUpdate = async (body,res) => {
     
 }
 
-/***
-* get notification id and username 
-* marks the notification as read if username = notification.user
-****/
-const markNotificationAsRead = async (req,res) => {
-	var data = {}
-	try {
-		data = req.body
-	}catch(e){
-		res.status(406).json({})
-	}
-	const {id,user} = data
 
-	let sql = `update mymes.notifications
-				set read = true
-				where id = ${id} and username = '${user}'`
-
-	try{
-		res.status(200).json(await db.one(sql))
-	}catch(e){
-		console.error("error in markNotificationAsRead : ",e)
-		res.status(200).json({error : e})
-	}
-}
-
-const changeUserLang = async (req,res) => {
-	var data = {}
-	try {
-		data = req.body
-	}catch(e){
-		res.status(406).json({})
-	}
-	const {locale,user} = data
-	
-	let sql = `update users
-				set locale = '${locale}'
-				where username = '${user}'`
-	try{
-		res.status(200).json(await db.one(sql))
-	}catch(e){
-		console.error("error in changeUserLang : ",e)
-		res.status(200).json({error : e})
-	}
-}
-
-/***
-* Get the approval of the erp acceptance of the work reports
-* And set approve propety of the reports to true
-****/
-const approveWorkReports = async (req,res) => {
-	var data = {}
-
-	try {
-		data = JSON.parse(req.body.data)
-	}catch(e){
-		res.status(406).json({})
-	}
-	const ids = data[0].REPORTS.map(x => x.MESID);
-	let sql = `update mymes.work_report
-				set approved = true
-				where id = any (ARRAY[${ids}]) returning 1`
-	try{
-		lines = await db.any(sql)
-		res.status(200).json(lines)
-	}catch(e){
-		console.error("error in approveWorkReport : ",e)
-		res.status(406).json({error: 'approveWorkReports : ' + e})		
-	}
-}
-
-/***
-* Exports the Work Reports that are not yet Sent to the Erp server
-* And set Sent propety of the reports to true
-****/
-const exportWorkReport = async (req,res) => {
-	const option = {year:'2-digit', month: '2-digit', day: "2-digit" }
-	const date = new Date().toLocaleDateString("he",option).replace(/-/g,'/')
-	let sql = `select w.id as id ,extserial as wo,erpact as act,w.quant
-				from mymes.work_report as w,mymes.serials as s ,mymes.actions as a
-				where a.id = w.act_id
-				and s.id = w.serial_id
-				and extserial is not null
-				and erpact is not null
-				and (sent is null or sent is false);`
-	try{
-		var lines = await db.any(sql)
-
-		lines = await Promise.all(lines.map( async w => {
-			const idsql = `select i.id,i.name from mymes.identifier i, mymes.identifier_links il
-						   where i.id = il.identifier_id
-						   and il.parent_id = ${w.id};`			
-			const iden = await db.any(idsql)
-			const identifiers = iden.map( id => ({id: id.id, name: id.name}))
-			return {...w, identifiers}
-		}))
-		
-		const data = {
-			date : date,
-			data: lines
-		}
-
-		if (lines.length) {
-
-			res.status(200).json(data)
-		
-			const ids = lines.map(x=>x.id).toString()
-
-			sql = `update mymes.work_report
-				set sent = true
-				where id = any (ARRAY[${ids}]) returning 1`
-			db.any(sql).catch(e=> console.error(e))	
-		}
-		else {
-			res.status(405).json({massage : 'no data found'})
-		}
-	}catch(e){
-		console.error("error in exportWorkReport : ",e)
-		res.status(406).json({error : e})
-	}
-}
-
-const importSerial = (req,res) => {
-	const part_schema = schemas['parts'].schema
-	const serial_schema = schemas['serials'].schema	
- 	var data = {}
-  	try {
-    data = JSON.parse(req.body.data)
- 	 }catch(e){
-    res.status(406).json({})
-	  }
- 	data.map(async (serial) => {
- 		var sql = `select id,part_id from mymes.serials where name = '${serial.SERIAL.SERIALNAME}';`
- 		var serial_id,parent_id,part_id
- 		var process = {}
- 		try{
-	    	const xxx = await db.one(sql)  
-	    	serial_id = xxx.id
-	    	part_id = xxx.part_id
-
-	    }catch(e){ /*serial_id can be null*/ }	
- 		try{
-	 		process = serial.SERIAL.PROCNAME ?  await db.one(`select id,name from mymes.process where erpproc = '${serial.SERIAL.PROCNAME}';`)  : process
-	    }catch(e){ /*prosecc_id can be null*/ }	 
- 		try{
-	 	 	parent_id = serial.SERIAL.PARENT ? await db.one(`select id from mymes.serials where name = '${serial.SERIAL.PARENT}';`): null 
-	    }catch(e){ /*parent_serial_id can be null*/ }
- 		try{
- 			sql = `select id from mymes.part where name = '${serial.PART.PARTNAME}' and revision = '${serial.PART.REVISION}';`
-	 	 	part_id = !part_id && serial.PART.PARTNAME ? (await db.one(sql)).id : part_id 
-	    }catch(e){ /*parent_serial_id can be null*/ }	    
-
-	    const partAllreadyExists = part_id > 0 
-
-
-	    if(serial_id) {
-	    	console.warn('all ready exists')
-			serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1,lot: x.LOT, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
-			const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,'kit')) : []			   	
-	    }
-	    else{
-	    	try {
-	    		if(!partAllreadyExists) {
-		    		try {
-    			
-				    	const partParams = {
-				    		name : serial.PART.PARTNAME,
-							active: true,
-							part_status : 'Active',
-				    		revision: serial.PART.REVISION,
-				    		doc_revision: serial.PART.DOCREV,
-				    		row_type : 'part',
-				    		description : serial.PART.PARTDES,
-				    		lang_id :  1,
-				    	}
-						part_id = await InsertToTables(partParams,part_schema)
-					}catch(e){
-						console.warn('part allready exists',e)
-					}
-				}
-
-				let procName = ''
-				if(!process.id) {
-					serial.SERACT = await Promise.all(serial.SERACT && serial.SERACT.map(async (x) => {
-						const sql = `select id,name,serialize,quantitative from mymes.actions where erpact = '${x.ACTNAME}';`
-						const act = await db.one(sql)
-						return {act_name: act.name, pos : x.POS, serialize : act.serialize, quantitative : act.quantitative}
-					})).then(actions => actions,e => null)
-
-					if (serial.SERACT) {
-						const processParams = {
-							name : serial.SERIAL.PROCNAME,
-							erpproc : serial.SERIAL.PROCNAME,
-							active : true,
-							description :  `Loadded with the WorkOrder: ${serial.SERIAL.SERIALNAME}`,
-							lang_id: 1
-						}						
-						const proc_id = await insert({body :processParams},res,'process',mute = true)					
-						serial.SERACT = serial.SERACT.map(x=> ({...x , parent: proc_id}))				
-						//const ret = proc_id ? await Promise.all( await batchInsert_(serial.SERACT,'proc_act')) : []
-						const ret = proc_id ? await Promise.all(serial.SERACT.map(act => insert({body:act},res,'proc_act',mute = true))) : []
-						procName = serial.SERIAL.PROCNAME
-					}
-				}
-
-	    		const end_date = serial.SERIAL.PEDATE ? {end_date : serial.SERIAL.PEDATE} : {}			
-		    	const serialParams = {
-		    		name : serial.SERIAL.SERIALNAME,
-		    		quant : serial.SERIAL.SERIALQUANT,
-		    		active: true,
-		    		partname : serial.PART.PARTNAME+':'+serial.PART.REVISION,
-		    		status: 'Released',
-		    		procname : process.id ? process.name : procName,
-		    		part_serial_name: parent_id ? serial.SERIAL.PARENT : '',
-		    		row_type : 'serial',
-		    		end_date : null, 
-		    		extserial: serial.SERIAL.SERIALNAME,
-		    		description : serial.SERIAL.SERIALDES,
-		    		lang_id :  1,
-				    ...end_date		    		
-		    	}
-				serial_id = await insert({body :serialParams},res,'serials',mute = true)	
-
-				if(!partAllreadyExists){
-					serial.BOM = serial.BOM && serial.BOM.map(x => ({ lang_id: 1, partname : x.PARTNAME,	coef : x.COEF, parent : part_id}))
-					serial.LOC = serial.LOC && serial.LOC.map(x => ({ lang_id: 1, location : x.LOCATION, x :x.X, y: x.Y, z:x.Z,partname: x.PARTNAME,quant: x.QUANT, act_name :x.ACTNAME, parent : part_id}))
-					const bom = serial.BOM && serial.BOM.length ? await Promise.all( await batchInsert_(serial.BOM,'bom')) : []
-					const loc = serial.LOC && serial.LOC.length ? await Promise.all( await batchInsert_(serial.LOC,'locations')) : []		
-				}
-				serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1,lot: x.LOT, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
-				const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,'kit')) : []
-			}catch(e){
-				console.error('error in importSerial : ',e)
-			}	
-		}
-
-    })	
-  res.status(201).json({})
-}
 
 module.exports = {
-  fetch, fetchRoutes, fetchResources, fetchTags,fetchByName, update, batchUpdate, batchInsert, insert, remove,
-  runQuery ,runFunc, func, fetchNotifications, importSerial,  exportWorkReport ,approveWorkReports, markNotificationAsRead ,
-  changeUserLang ,fetchWorkPaths , fetchWR
+  fetch, fetchRoutes, fetchResources, fetchTags, update, batchUpdate, batchInsert, insert, remove,
+  runQuery ,runFunc, func, fetchNotifications
 }

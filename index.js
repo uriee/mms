@@ -14,16 +14,27 @@ const {
   runQuery,
   func,
   runFunc,
-  importSerial,
-  exportWorkReport,
-  approveWorkReports ,
-  markNotificationAsRead,
-  changeUserLang,
+} = require('./models/Schemas')
+
+const {
   fetchWorkPaths ,
   fetchWR 
-} = require('./models/Schemas')
+} = require('./models/WorkReport')
+
+const {
+  importSerial,
+  exportWorkReport,
+  approveWorkReports
+} = require('./models/ERPInterface')
+
 const {fetchDashData} = require('./models/Dash')
-const { bugInsert } = require('./models/utils')
+
+const { 
+  bugInsert,
+  markNotificationAsRead,
+  changeUserLang
+ } = require('./models/utils')
+
 const app = express();
 const bodyParser = require('body-parser')
 app.use(bodyParser.json({limit: "50mb"})) 
