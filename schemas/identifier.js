@@ -18,6 +18,8 @@ exports.identifier = {
 					
 			choosers :{}
 		},
+		
+		postInsertHelpers : [{functionName:'updateParentIdentifiers',parameters : ['son_identifiers']}],
 
 		pre_delete: {
 			function: 'delete_identifier_link',

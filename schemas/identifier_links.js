@@ -11,8 +11,9 @@ const {languagesArray} = require('./schema_conf.js')
 
 exports.identifier_links = {
 		sql: {
-			all: `select a.name as act_name ,r.name as resource_name ,s.name as serial_name, l.created_at as created_at
-            from mymes.identifier_links l,mymes.serials s, mymes.actions a, mymes.resources r, mymes.identifiable i 
+			all: `select a.name as act_name ,r.name as resource_name ,s.name as serial_name, l.created_at::timestamp as created_at ,l.row_type, f.name as fault_name
+			from mymes.identifier_links l left join mymes.fault f on f.id = l.parent_id and l.row_type = 'fault',
+			mymes.serials s, mymes.actions a, mymes.resources r, mymes.identifiable i 
             where i.id = l.parent_id
             and s.id = l.serial_id
             and a.id = l.act_id
