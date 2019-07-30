@@ -41,6 +41,7 @@ const {mnt_plans} = require('../schemas/mnt_plans.js')
 const {mnt_plan_items} = require('../schemas/mnt_plan_items.js') 
 const {fault} = require('../schemas/fault.js') 
 const {fault_type} = require('../schemas/fault_type.js')
+const {fault_type_actions} = require('../schemas/fault_type_act.js')
 const {fault_status} = require('../schemas/fault_status.js')
 
 const schemas = {
@@ -82,7 +83,8 @@ const schemas = {
 	numerators,
 	fault_status,
 	fault_type,
-	fault : fault
+	fault : fault,
+	fault_type_actions
 }
 
 /*
@@ -246,20 +248,18 @@ const getFkeys = async (fkeys,params) => {
 	try{
 		const fkeysNames = Object.keys(fkeys)
 		const keyValues = await Promise.all(fkeysNames.map(async (key) => {
-			const query = fkeys[key]
-			console.log('********************************************0',key)
-	
+			const query = fkeys[key]	
 			/*const parameter = Array.isArray(params[query.value]) ? params[query.value].toString() :
 								[params[query.value]]*/
 			const parameters = Array.isArray(query.value) ? 
 				query.value.map(value =>  Array.isArray(params[value]) ? params[value].toString() :	params[value]) :
 				Array.isArray(params[query.value]) ? params[query.value].toString() :[params[query.value]]
 			
-				console.log('********************************************',params[query.value],query)
+				
 			var res = query.hasOwnProperty('query') ?
-						await db.any(query.query, parameters).then(x => Array.isArray(x)? x.map(x=> x.id) : x.id) :
+						await db.any(query.query, parameters).then(x => Array.isArray(x)? x.map(x=> x.id) : x.id).then(x => x.length == 0 ? query.default : x ) :
 					    params[query.value]
-	
+						console.log('********************************************',params[query.value],query,res)
 			return res
 		})).then(x => x)
 
@@ -270,7 +270,7 @@ const getFkeys = async (fkeys,params) => {
 	} catch(err) {
 		err = 'ERROR in fkeys() :' + err
 		console.error(err)
-		throw new Error(err)
+		throw new error(err)
 		}
 	return keys;
 }
@@ -374,7 +374,7 @@ const insert = async (req, res, entity , mute = false) => {
 											    });
 		//console.log("pre_insert   :   :  :  : ",pre_insert && pre[pre_insert.function])
 		if (pre_insert && pre[pre_insert.function] === -1) {
-			res.status(200).json({pass: true})
+			res && res.status(200).json({pass: true})
 			return
 		}
 
@@ -425,7 +425,7 @@ const update = async (req, res, entity) => {
 	const fkeysNames = Object.keys(schema.fkeys).filter(key => schema.fkeys[key].value in params || (schema.fkeys[key].value && (schema.fkeys[key].value)[0] in params))
 	fkeysNames.map((key) => {
 			fkSchema[key] = schema.fkeys[key]
-		})
+		})	
 	try {
 		var fkeys = await getFkeys(fkSchema, params)
 		Object.keys(fkeys).forEach(key => {
@@ -444,7 +444,8 @@ const update = async (req, res, entity) => {
 				  	const table = schema.tables[tn]
 				  	const sets = table.fields.filter(field => {
 							const fname = getField(field.field,params['flag'])
-									return allParams.hasOwnProperty(fname) && (allParams[fname] || allParams[fname] === false)
+
+									return allParams.hasOwnProperty(fname) && (allParams[fname] !== undefined) // (allParams[fname] || allParams[fname] === false || allParams[fname] === 0)
 										})
 										.map(field => {
 											const fname = getField(field.field,params['flag'])
@@ -452,7 +453,7 @@ const update = async (req, res, entity) => {
 										})
 				  	const wheres = table.fields.filter(field => params.hasOwnProperty(field.key))
 				  							   .map(field => ({where : getField(field.field,params['flag']) > '' ? getField(field.field,params['flag']) : field.key , equals: params[field.key]}))
-				  	const sqlSet = sets.reduce((old,set) => old + `"${set.set}" = '${set.to}'${set.conv ? set.conv: ''},`,'').slice(0,-1)
+				  	const sqlSet = sets.reduce((old,set) => old + `"${set.set}" = ${set.to ? "'" : ""}${set.to}${set.to ? "'" : ""}${set.conv ? set.conv: ''},`,'').slice(0,-1)
 				  	const sqlWhere = wheres.reduce((old,where) => old + `${where.where} = '${where.equals}' and `,'').slice(0,-5)
 				  	const sql = `update ${!isPublic ? 'mymes.' : ''}${tn} set ${sqlSet} where ${sqlWhere} returning 1;`
 				  	console.log("update sql:",sql)
@@ -503,7 +504,7 @@ let params = {}
 											    .then(data => {
 											        console.log(`Return from function - ${pre_delete.function} : ${data}`); 
 											    })	
-	//console.log("~~~----~~~----~~~:",sql,finalSqls,pre)		
+	
    	const ret  = await Promise.all(finalSqls.map(sql => runQuery(sql)))
 								
 	const post = post_delete && params.keys && await db.func(post_delete.function, [params.keys])
