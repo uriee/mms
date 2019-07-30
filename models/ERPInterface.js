@@ -30,10 +30,10 @@ const approveWorkReports = async (req,res,entity) => {
 * And set Sent propety of the reports to true
 ****/
 const exportWorkReport = async (req,res,entity) => {
-	const row_type = entity || 'work_report'	
+
 	const option = {year:'2-digit', month: '2-digit', day: "2-digit" }
 	const date = new Date().toLocaleDateString("he",option).replace(/-/g,'/')
-	let sql = `select w.id as id ,extserial as wo,erpact as act,w.quant
+	let sql = `select w.id as id ,extserial as wo,erpact as act,w.quant,'work_report' as row_type
 				from mymes.work_report as w,mymes.serials as s ,mymes.actions as a
 				where a.id = w.act_id
 				and s.id = w.serial_id
@@ -51,11 +51,15 @@ const exportWorkReport = async (req,res,entity) => {
 		var lines = await db.any(sql)
 
 		lines = await Promise.all(lines.map( async w => {
-			const idsql = `select i.id,i.name from mymes.identifier i, mymes.identifier_links il
-						   where i.id = il.identifier_id
-						   and row_type = '${row_type}'
-						   and il.parent_id = ${w.id};`			
-			const iden = await db.any(idsql)
+
+			const identifiers_sql = `select  i.id,i.name,array_agg(s.name) as sons
+							from mymes.identifier i left join mymes.identifier s on s.parent_identifier_id = i.id
+							, mymes.identifier_links il
+							where i.id = il.identifier_id
+							and row_type = '${w.row_type}'
+							and il.parent_id = ${w.id}
+							group by  i.id,i.name;`						   		
+			const iden = await db.any(identifiers_sql)
 			const identifiers = iden.map( id => ({id: id.id, name: id.name}))
 			return {...w, identifiers}
 		}))

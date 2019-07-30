@@ -11,8 +11,9 @@ const {languagesArray} = require('./schema_conf.js')
 
 exports.identifier = {
 		sql: {
-			all: `select identifier.id, identifier.name as identifier, identifier.id as name , il.serial_id, il.act_id 
-			from mymes.identifier as identifier, mymes.identifier_links as il
+			all: `select identifier.id, identifier.name as identifier, identifier.id as name , il.serial_id, il.act_id  , p.name as parent_identifier
+			from mymes.identifier as identifier left join mymes.identifier p on p.id = identifier.parent_identifier_id
+			,mymes.identifier_links as il
 			where identifier.id = il.identifier_id
 			and il.parent_id = $3 and row_type = $6`,
 					
@@ -37,7 +38,11 @@ exports.identifier = {
 		schema: {
 			pkey: 'identifier_id' ,
 
-			fkeys: {			
+			fkeys: {
+				parent_identifier_id : {
+					query : `select id from mymes.identifier where name = $1;`,
+					 value : 'parent_identifier'
+                },							
 
 			},
 
@@ -51,7 +56,11 @@ exports.identifier = {
 						{
 							field: 'parent_id',
 							variable : 'parent'
-						},																	
+						},	
+						{
+							field: 'parent_identifier_id',
+							variable : 'parent_identifier_id'
+						},																													
 						{
 							key: 'id'
 						}

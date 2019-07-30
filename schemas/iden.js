@@ -29,16 +29,17 @@ exports.iden = {
 			fkeys: {
 				parent_identifier_id: {
 					query : `select id from mymes.identifier where name = $1;`,
-					 value : 'parent_name'
+					 value : 'parent_name',
+					 default : null
                 },				
 			},
 
 			tables : {
-				iden :{
+				identifier :{
 					fields : [						
 						{
-							field: 'parent_Identifier_id',
-							fkey : 'parent_Identifier_id'
+							field: 'parent_identifier_id',
+							fkey : 'parent_identifier_id'
 						},																		
 						{
 							key: 'id'

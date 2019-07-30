@@ -270,7 +270,7 @@ const getFkeys = async (fkeys,params) => {
 	} catch(err) {
 		err = 'ERROR in fkeys() :' + err
 		console.error(err)
-		throw new error(err)
+		throw new Error(err)
 		}
 	return keys;
 }
