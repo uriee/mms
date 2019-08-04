@@ -9,11 +9,11 @@ const {languagesArray} = require('./schema_conf.js')
 	schema.fkeys : keys that need to be fetched from server in order to preform insert/update
 	schema.tables : the tables that need to be updated 
 */
-exports.fault_status = {
+exports.fix = {
 		sql: {
-			all: `select fault_status.id, fault_status.name, fault_status.tags, fault_status_t.description , active , first, sendable
-				  	from mymes.fault_status as fault_status left join mymes.fault_status_t as fault_status_t on fault_status.id = fault_status_t.fault_status_id
-					where fault_status_t.lang_id = $1 `,					
+			all: `select fix.id, fix.name, fix.tags, fix_t.description ,active , extname 
+				  	from mymes.fix as fix left join mymes.fix_t as fix_t on fix.id = fix_t.fix_id
+					where fix_t.lang_id = $1 `,					
 
 			choosers :{	
 	
@@ -22,7 +22,7 @@ exports.fault_status = {
 		},
 
 		schema: {
-			pkey: 'fault_status_id' ,
+			pkey: 'fix_id' ,
 
 			fkeys: {
 				lang_id : {
@@ -31,7 +31,7 @@ exports.fault_status = {
 			},
 
 			tables : {
-				fault_status :{
+				fix :{
 					fields : [
 						{
 							field: 'name',
@@ -44,34 +44,30 @@ exports.fault_status = {
 						{
 							field: 'row_type',
 							variable : 'row_type',
-							value : 'fault_status'
+							value : 'fix'
 						},						
 						{
 							field: 'active',
 							variable : 'active'
-						},					
+						},
 						{
-							field: 'first',
-							variable : 'first'
-						},						
-						{
-							field: 'sendable',
-							variable : 'sendable'
+							field: 'extname',
+							variable : 'extname'
 						},						
 						{
 							key: 'id'
 						}
 				   ]
 				},
-				fault_status_t :{
+				fix_t :{
 					fields : [
 						{
 							field: 'description',
 							variable: 'description'
 						},						
 						{
-							field: 'fault_status_id',
-							 fkey :'fault_status_id',
+							field: 'fix_id',
+							 fkey :'fix_id',
 							 key: 'id'},
 						{
 							field: 'lang_id',
