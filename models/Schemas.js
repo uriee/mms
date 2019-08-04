@@ -43,6 +43,8 @@ const {fault} = require('../schemas/fault.js')
 const {fault_type} = require('../schemas/fault_type.js')
 const {fault_type_actions} = require('../schemas/fault_type_act.js')
 const {fault_status} = require('../schemas/fault_status.js')
+const {fix} = require('../schemas/fix.js')
+const {fix_actions} = require('../schemas/fix_act.js')
 
 const schemas = {
 	employees ,
@@ -84,7 +86,9 @@ const schemas = {
 	fault_status,
 	fault_type,
 	fault : fault,
-	fault_type_actions
+	fault_type_actions,
+	fix,
+	fix_actions
 }
 
 /*
@@ -449,11 +453,11 @@ const update = async (req, res, entity) => {
 										})
 										.map(field => {
 											const fname = getField(field.field,params['flag'])
-											return {set : fname, to: allParams[fname], conv: field.conv }
+											return {set : fname, to: allParams[fname] , conv: field.conv }
 										})
 				  	const wheres = table.fields.filter(field => params.hasOwnProperty(field.key))
 				  							   .map(field => ({where : getField(field.field,params['flag']) > '' ? getField(field.field,params['flag']) : field.key , equals: params[field.key]}))
-				  	const sqlSet = sets.reduce((old,set) => old + `"${set.set}" = ${set.to ? "'" : ""}${set.to}${set.to ? "'" : ""}${set.conv ? set.conv: ''},`,'').slice(0,-1)
+				  	const sqlSet = sets.reduce((old,set) => old + `"${set.set}" = ${set.to != null ? "'" : ""}${set.to}${set.to != null ? "'" : ""}${set.conv ? set.conv: ''},`,'').slice(0,-1)
 				  	const sqlWhere = wheres.reduce((old,where) => old + `${where.where} = '${where.equals}' and `,'').slice(0,-5)
 				  	const sql = `update ${!isPublic ? 'mymes.' : ''}${tn} set ${sqlSet} where ${sqlWhere} returning 1;`
 				  	console.log("update sql:",sql)
