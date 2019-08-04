@@ -11,11 +11,12 @@ const {languagesArray} = require('./schema_conf.js')
 exports.fault = {
 		sql: {
 			all: `select fault.id, fault.name , fault_t.description,  
-            serial.name as serialname, status.name as status_name, type.name as type_name ,
+            serial.name as serialname, status.name as status_name, type.name as type_name ,fix.name as fix_name, 
             resource.name as resourcename , act.name as actname , sig_date, l.location as location, 
-            fault.tags, fault.open_date, fault.close_date, fault.quant , users.username as username
+            fault.tags, fault.close_date, fault.quant , users.username as username
 			from mymes.fault as fault left join mymes.fault_t as fault_t on fault.id = fault_t.fault_id
 			left join mymes.fault_type as type on fault_type_id = type.id 
+			left join mymes.fix as fix on fix_id = fix.id 			
 			left join mymes.fault_status as status on fault_status_id = status.id
 			left join mymes.actions as act on act_id = act.id
 			left join mymes.locations as l on location_id = l.id,
@@ -25,10 +26,12 @@ exports.fault = {
             and fault.sig_user = users.id 
 			and fault_t.lang_id = $1 `,
 			
-			final : ' order by name desc ',				
+			final : ' order by name desc ',	
+				
 
 			choosers :{
-                fault_type: `select name,description from mymes.fault_type f,mymes.fault_type_t t where active = true and f.id = t.fault_type_id and t.lang_id = $1;`,
+				fault_type: `select name,description from mymes.fault_type f,mymes.fault_type_t t where active = true and f.id = t.fault_type_id and t.lang_id = $1;`,
+				fix: `select name,description from mymes.fix f,mymes.fix_t t where active = true and f.id = t.fix_id and t.lang_id = $1;`,				
                 fault_status: `select name from mymes.fault_status where active = true;`,
                 resource: `select name from mymes.resource_groups where active = true;`,
 				serial: `select name from mymes.serials where active = true;`,
@@ -50,9 +53,13 @@ exports.fault = {
 				fault_type_id: {
 					query : `select id from mymes.fault_type where name = $1;`,
 					 value : 'type_name'
-                },
+				},
+				fix_id: {
+					query : `select id from mymes.fix where name = $1;`,
+					 value : 'fix_name'
+                },				
 				fault_status_id: {
-					query : `select id from mymes.fault_status where name = $1;`,
+					query : `select id from mymes.fault_status where name = $1 and active = true;`,
 					 value : 'status_name'
 				},                
 				serial_id: {
@@ -93,7 +100,14 @@ exports.fault = {
 							table: 'type',
 							filterField : 'name',
 							filterValue: 'type',								
-                        },	
+						},	
+						{
+							field: 'fix_id',
+							fkey : 'fix_id',
+							table: 'fix',
+							filterField : 'name',
+							filterValue: 'fix',								
+                        },						
 						{
 							field: 'fault_status_id',
 							fkey : 'fault_status_id',
@@ -133,10 +147,6 @@ exports.fault = {
 							field: 'name',
 							variable : 'name'
 						},                      
-						{
-							field: 'open_date',
-							variable : 'open_date'
-						},
 						{
 							field: 'close_date',
 							variable : 'close_date'
