@@ -9,6 +9,21 @@ const {languagesArray} = require('./schema_conf.js')
 	schema.tables : the tables that need to be updated 
 */
 
+const updateParentIdentifiers = async (db,id,son_identifers) => {
+	console.log("~~~1:",id,son_identifers)
+	return await son_identifers.map(async (obj) => 
+		Promise.all(Object.keys(obj).map( async parent => {
+			const identifier = obj[parent]
+			const sql = `update mymes.identifier
+						set parent_identifier_id = ${id}
+						where name = '${identifier}'
+						and parent_id = (select id from mymes.part where name = '${parent}') returning 1;`
+						 console.log("~~~2:",sql,parent,identifier,id)						 
+			return await db.one(sql)
+		}))
+	)
+}
+
 exports.identifier = {
 		sql: {
 			all: `select identifier.id, identifier.name as identifier, identifier.id as name , il.serial_id, il.act_id  , p.name as parent_identifier
@@ -20,7 +35,7 @@ exports.identifier = {
 			choosers :{}
 		},
 		
-		postInsertHelpers : [{functionName:'updateParentIdentifiers',parameters : ['son_identifiers']}],
+		postInsertHelpers : [{func : updateParentIdentifiers ,parameters : ['son_identifiers']}],
 
 		pre_delete: {
 			function: 'delete_identifier_link',

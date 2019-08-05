@@ -98,23 +98,6 @@ const fillTemplate = function(templateString, templateVars){
 }
 */
 
-const postInsertHelpers = {
-
-	updateParentIdentifiers : async (id,son_identifers) => {
-		console.log("~~~1:",id,son_identifers)
-		return await son_identifers.map(async (obj) => {
-			const parent = Object.keys(obj)[0]
-			const identifier = obj[parent]
-			const sql = `update mymes.identifier
-						 set parent_identifier_id = ${id}
-						 where name = '${identifier}'
-						 and parent_id = (select id from mymes.part where name = '${parent}') returning 1;`
-						 console.log("~~~2:",sql,parent,identifier,id)						 
-			return await db.one(sql)
-		})
-	},
-}
-
 const fetchTags = async(request, response) =>{
 	const sql = `select id::Integer,name,row_type,tags from mymes.tagable
 					where exists
@@ -406,7 +389,7 @@ const insert = async (req, res, entity , mute = false) => {
 							
 		const pih = schemas[entity].postInsertHelpers &&  schemas[entity].postInsertHelpers.map(async PIH => {
 			const PIHparameters = PIH && PIH.parameters.map(x => params[x])
-			return PIH && PIHparameters && await postInsertHelpers[PIH.functionName](new_id,PIHparameters)
+			return PIH && PIHparameters && await PIH.func(db,new_id,PIHparameters)
 		})
 
 		return new_id	
