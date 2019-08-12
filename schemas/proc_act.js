@@ -10,7 +10,8 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.proc_act = {
 		sql: {
-			all: `select proc_act.id, process.name, proc_act.pos, actions.name as act_name, proc_act.quantitative, proc_act.serialize
+			all: `select proc_act.id, process.name, proc_act.pos, actions.name as act_name,
+				  proc_act.quantitative, proc_act.serialize, proc_act.batch 
 					from mymes.proc_act as proc_act ,mymes.process as process, mymes.actions as actions
 					where process.id = proc_act.process_id
 					and actions.id = proc_act.act_id 
@@ -68,7 +69,11 @@ exports.proc_act = {
 						{
 							field: 'serialize',
 							variable : 'serialize'
-						},																	
+						},
+						{
+							field: 'batch',
+							variable : 'batch'
+						},																							
 						{
 							key: 'id'
 						}

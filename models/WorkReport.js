@@ -3,7 +3,7 @@ const {db} = require('../DBConfig.js')
 const fetchWorkPaths = async(request, response) =>{
 	const {user} = request.query
 	const sql = `select r.name as resourcename,serial.name as serialname,act.name as actname ,seract.balance , seract.quant , seract.quantitative ,
-		seract.serialize and part.serialize as serialize 
+		seract.serialize and part.serialize as serialize , seract.batch_size
 		from mymes.actions as act, mymes.part as part, 
 		mymes.serials as serial , mymes.serial_act as seract 
 		join mymes.act_resources as ar on (ar.act_id = seract.id and type = 3)

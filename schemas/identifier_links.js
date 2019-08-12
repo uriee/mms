@@ -50,7 +50,11 @@ exports.identifier_links = {
 						{
 							field: 'act_id',
 							variable : 'act_id'
-						},																	
+						},	
+						{
+							field: 'batch_array',
+							variable : 'batch_array'
+						},																						
 						{
 							field: 'identifier_id',
 							fkey :'identifier_id',

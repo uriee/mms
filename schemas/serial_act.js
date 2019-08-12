@@ -10,7 +10,8 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.serial_act = {
 		sql: {
-			all: `select serial_act.id, serial.name, serial_act.pos,serial_act.quant, serial_act.balance,  actions.name as act_name , serial_act.quantitative, serial_act.serialize
+			all: `select serial_act.id, serial.name, serial_act.pos,serial_act.quant, serial_act.balance,  actions.name as act_name ,
+				  serial_act.quantitative, serial_act.serialize, serial_act.batch_size
 					from mymes.serial_act as serial_act ,mymes.serials as serial, mymes.actions as actions
 					where serial.id = serial_act.serial_id
 					and actions.id = serial_act.act_id 
@@ -71,7 +72,11 @@ exports.serial_act = {
 						{
 							field: 'serialize',
 							variable : 'serialize'
-						},																	
+						},
+						{
+							field: 'batch_size',
+							variable : 'batch_size'
+						},																							
 						{
 							key: 'id'
 						}
