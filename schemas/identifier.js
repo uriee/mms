@@ -26,7 +26,8 @@ const updateParentIdentifiers = async (db,id,son_identifers) => {
 
 exports.identifier = {
 		sql: {
-			all: `select identifier.id, identifier.name as identifier, identifier.id as name , il.serial_id, il.act_id  , p.name as parent_identifier
+			all: `select identifier.id, identifier.name as identifier, identifier.mac_address, identifier.secondary,
+			 identifier.id as name , il.serial_id, il.act_id  , p.name as parent_identifier
 			from mymes.identifier as identifier left join mymes.identifier p on p.id = identifier.parent_identifier_id
 			,mymes.identifier_links as il
 			where identifier.id = il.identifier_id
@@ -47,7 +48,7 @@ exports.identifier = {
 		},	
 		post_insert: {
 			function: 'insert_identifier_link_post',
-			parameters: ['parent','parent_schema','identifier']
+			parameters: ['parent','parent_schema','identifier','batch_array']
 		},				
 
 		schema: {
@@ -69,6 +70,14 @@ exports.identifier = {
 							variable : 'identifier'
 						},
 						{
+							field: 'mac_address',
+							variable : 'mac_address'
+						},
+						{
+							field: 'secondary',
+							variable : 'secondary'
+						},												
+						{
 							field: 'parent_id',
 							variable : 'parent'
 						},	
@@ -80,33 +89,7 @@ exports.identifier = {
 							key: 'id'
 						}
 				   ]
-				},/*
-				identifier_links :{
-					fields : [
-						{
-							field: 'parent_id',
-							variable : 'parent'
-						},	
-						{
-							field: 'row_type',
-							variable : 'parent_schema'
-						},
-						{
-							field: 'serial_id',
-							variable : 'serial_id'
-						},	
-						{
-							field: 'act_id',
-							variable : 'act_id'
-						},																	
-						{
-							field: 'identifier_id',
-							fkey :'identifier_id',
-							key : 'id'
-						},											
-				   ]
-				}
-				*/				
+				},				
 			}
 		}	
 	}
