@@ -126,7 +126,7 @@ exports.fault = {
 							field: 'resource_id',
 							fkey : 'resource_id',
 							table: 'resource',
-							filterField : 'resourcename',
+							filterField : 'name',
 							filterValue: 'resourcename',								
 						},  
 						{

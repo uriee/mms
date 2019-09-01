@@ -60,8 +60,18 @@ exports.iden = {
 						},																													
 						{
 							field: 'parent_identifier_id',
-							fkey : 'parent_identifier_id'
-						},																		
+							fkey : 'parent_identifier_id',
+							table: 'p',
+							filterField : 'name',
+							filterValue: 'parent_name',
+						},	
+						{
+							field: 'part_id',
+							fkey : 'part_id',
+							table: 'part',
+							filterField : 'name',
+							filterValue: 'part_name',
+						},																							
 						{
 							key: 'id'
 						}

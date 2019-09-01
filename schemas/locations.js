@@ -54,7 +54,10 @@ exports.locations = {
 						},						
 						{
 							field: 'act_id',
-							fkey : 'act_id'
+							fkey : 'act_id',
+							table: 'actions',
+							filterField : 'name',
+							filterValue: 'act_name',							
 						},															
 						{
 							field: 'location',
