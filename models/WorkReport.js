@@ -59,7 +59,7 @@ const fetchWR = async(request, response) =>{
 		and (act.name  = '${actname}' or loc.act_id is null)
 		and loc.part_id = ser.part_id;`
 
-	const son_identifiers_sql = `select sp.name,array_agg(i.name) as identifiers
+	const son_identifiers_sql = `select sp.name, b.coef, array_agg(i.name) as identifiers
 		from mymes.identifier i,
 			mymes.part pp,
 			mymes.part sp,
@@ -79,32 +79,65 @@ const fetchWR = async(request, response) =>{
 			and s.part_id = pp.id
 			and a.name = '${actname}'
             and s.name = '${serialname}'
-        group by sp.name;`
+		group by sp.name, b.coef;`
+
+	const sonnasql = 	`select sp.name, b.coef, array['N/A'] as identifiers
+	from mymes.part pp,
+		mymes.part sp,
+		mymes.locations l,
+		mymes.bom b,
+		mymes.serials s,
+		mymes.actions a
+	where  l.part_id = pp.id
+		and b.parent_id = pp.id
+		and b.produce = true
+		and l.part_id = b.parent_id
+		and l.partname = b.partname
+		and sp.serialize is true
+		and a.id = l.act_id
+		and sp.name = b.partname	
+		and s.part_id = pp.id
+		and a.name = '${actname}'
+		and s.name = '${serialname}'
+	group by sp.name, b.coef;`		
 
     const typesql = `select f.name,t.description
-                     from mymes.fault_type f ,mymes.fault_type_t t, mymes.fault_type_act fta, mymes.actions a
-                     where f.active = true
-                     and t.fault_type_id = f.id
-                     and fta.fault_type_id = f.id
-                     and fta.action_id = a.id
-                     and a.name = '${actname}'
-					 and t.lang_id = ${lang_id || 1};`
+						from mymes.fault_type f ,mymes.fault_type_t t, mymes.fault_type_act fta, mymes.actions a
+						where f.active = true
+						and t.fault_type_id = f.id
+						and fta.fault_type_id = f.id
+						and fta.action_id = a.id
+						and a.name = '${actname}'
+						and t.lang_id = ${lang_id || 1};`
+
 	const fixsql = `select f.name,t.description
-                     from mymes.fix f ,mymes.fix_t t, mymes.fix_act fa, mymes.actions a
-                     where f.active = true
-                     and t.fix_id = f.id
-                     and fa.fix_id = f.id
-                     and fa.action_id = a.id
-                     and a.name = '${actname}'
-                     and t.lang_id = ${lang_id || 1};`					 
+						from mymes.fix f ,mymes.fix_t t, mymes.fix_act fa, mymes.actions a
+						where f.active = true
+						and t.fix_id = f.id
+						and fa.fix_id = f.id
+						and fa.action_id = a.id
+						and a.name = '${actname}'
+						and t.lang_id = ${lang_id || 1};`	
+
+	const kitsql = 	`select distinct lot,kit.partname, kit.in_use
+						from mymes.kit kit, mymes.locations loc ,mymes.serials s, mymes.actions act 
+						where s.name = '${serialname}'
+						and kit.serial_id = s.id
+						and loc.part_id = s.part_id
+						and kit.partname = loc.partname
+						and act.name = '${actname}'
+						and loc.act_id = act.id
+						order by kit.partname,lot;`
 
 	try{
 		const WR =  await db.any(WRsql).then(x=>x)	
 		const loc = await db.any(locsql).then(x=>x)
 		const type = await db.any(typesql).then(x=>x)
-		const fix = await db.any(fixsql).then(x=>x)		
-        const son_identifiers = await db.any(son_identifiers_sql).then(x=>x)      
-		response.status(200).json({main:{WR,type,fix,loc,son_identifiers}})
+		const fix = await db.any(fixsql).then(x=>x)
+		const kit = await db.any(kitsql).then(x=>x)
+		const sonna = await db.any(sonnasql).then(x=>x)			
+        const son_identifiers = [...await db.any(son_identifiers_sql).then(x=>x) , ...sonna]
+		response.status(200).json({main:{WR,type,fix,loc,son_identifiers,kit}})
 	}catch(e){
 		console.error(e)
 	}

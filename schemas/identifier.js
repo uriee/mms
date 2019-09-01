@@ -13,15 +13,17 @@ const updateParentIdentifiers = async (db,id,son_identifers) => {
 	console.log("~~~1:",id,son_identifers)
 	return await son_identifers.map(async (obj) => 
 		Promise.all(Object.keys(obj).map( async parent => {
-			const identifier = obj[parent]
-			const sql = `update mymes.identifier
-						set parent_identifier_id = ${id}
-						where name = '${identifier}'
-						and parent_id = (select id from mymes.part where name = '${parent}') returning 1;`
-						 console.log("~~~2:",sql,parent,identifier,id)						 
-			return await db.one(sql)
-		}))
-	)
+
+			return await obj[parent].map(async identifier => {
+				const sql = `update mymes.identifier
+							set parent_identifier_id = ${id}
+							where name = '${identifier}'
+							and parent_id = (select id from mymes.part where name = '${parent}') returning 1;`
+							console.log("~~~2:",sql,parent,identifier,id)						 
+				return await db.one(sql)
+			})
+		})
+	))
 }
 
 exports.identifier = {
