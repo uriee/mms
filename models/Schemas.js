@@ -45,7 +45,7 @@ const {fault_type_actions} = require('../schemas/fault_type_act.js')
 const {fault_status} = require('../schemas/fault_status.js')
 const {fix} = require('../schemas/fix.js')
 const {fix_actions} = require('../schemas/fix_act.js')
-
+const {lot_swap} = require('../schemas/lot_swap.js')
 const schemas = {
 	employees ,
 	parts ,
@@ -88,7 +88,8 @@ const schemas = {
 	fault : fault,
 	fault_type_actions,
 	fix,
-	fix_actions
+	fix_actions,
+	lot_swap,
 }
 
 /*
@@ -187,6 +188,7 @@ Populate the response data from DB with the requested data of a certain entity
 */
 const fetch = async (request, response, entity) => {
 	const {lang/*pageSize,currentPage*/,zoom,name,parent,user,flag,parentSchema} = request.query
+
 	const tables = schemas[entity].schema.tables
 	const limit =  schemas[entity].limit || 50
 	const filters = flatten(	
@@ -597,6 +599,6 @@ const batchUpdate = async (body,res) => {
 
 
 module.exports = {
-  fetch, fetchRoutes, fetchResources, fetchTags, update, batchUpdate, batchInsert, insert, remove,
-  runQuery ,runFunc, func, fetchNotifications
+  fetch, fetchRoutes, fetchResources, fetchTags, update, batchUpdate, batchInsert, batchInsert_,  insert, remove,
+  runQuery ,runFunc, func, fetchNotifications, InsertToTables
 }

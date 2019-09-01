@@ -10,7 +10,7 @@ const {languagesArray} = require('./schema_conf.js')
 */
 exports.kit = {
 		sql: {
-			all: `select kit.id, kit.partname, kit.quant, kit.balance, kit.lot 
+			all: `select kit.id, kit.partname, kit.quant, kit.balance, kit.lot , kit.in_use
 					from mymes.kit as kit ,mymes.serials as serials 
 					where serials.id = kit.serial_id
 					and serials.id = $3 
@@ -56,6 +56,10 @@ exports.kit = {
 							field: 'lot',
 							variable : 'lot'
 						},											
+						{
+							field: 'in_use',
+							variable : 'in_use'
+						},						
 						{
 							key: 'id'
 						}
