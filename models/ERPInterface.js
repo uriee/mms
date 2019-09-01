@@ -1,4 +1,10 @@
 const {db} = require('../DBConfig.js')
+const {parts} = require('../schemas/parts.js')
+const {
+	batchInsert_,
+	insert,
+	InsertToTables
+  } = require('./Schemas.js')
 
 /***
 * Get the approval of the erp acceptance of the work reports
@@ -25,45 +31,41 @@ const approveWorkReports = async (req,res,entity) => {
 	}
 }
 
+
 /***
 * Exports the Work Reports that are not yet Sent to the Erp server
 * And set Sent propety of the reports to true
 ****/
-const exportWorkReport = async (req,res,entity) => {
-
+const exportWorkReport = async (req,res) => {
 	const option = {year:'2-digit', month: '2-digit', day: "2-digit" }
 	const date = new Date().toLocaleDateString("he",option).replace(/-/g,'/')
-	let sql = `select w.id as id ,extserial as wo,erpact as act,w.quant,'work_report' as row_type
+	let sql = `select w.id as id ,extserial as wo,erpact as act,w.quant
 				from mymes.work_report as w,mymes.serials as s ,mymes.actions as a
 				where a.id = w.act_id
 				and s.id = w.serial_id
 				and extserial is not null
 				and erpact is not null
-				and (sent is null or sent is false);`
-	let sql_fault = `select w.id as id ,extserial as wo,erpact as act,w.quant
-				from mymes.work_report as w,mymes.serials as s ,mymes.actions as a
-				where a.id = w.act_id
-				and s.id = w.serial_id
-				and extserial is not null
-				and erpact is not null
-				and (sent is null or sent is false);`				
+				and (sent is null or sent is false)
+				order by w.id;`
 	try{
 		var lines = await db.any(sql)
-
+		
 		lines = await Promise.all(lines.map( async w => {
-
-			const identifiers_sql = `select  i.id,i.name,array_agg(s.name) as sons
+			const idsql = `select  i.id, i.name, i.secondary, i.mac_address, array_agg(s.name || '|' || sp.name) as sons
 							from mymes.identifier i left join mymes.identifier s on s.parent_identifier_id = i.id
+							left join mymes.part sp on sp.id = s.parent_id
 							, mymes.identifier_links il
 							where i.id = il.identifier_id
-							and row_type = '${w.row_type}'
+							and il.row_type = 'work_report'
 							and il.parent_id = ${w.id}
-							group by  i.id,i.name;`						   		
-			const iden = await db.any(identifiers_sql)
-			const identifiers = iden.map( id => ({id: id.id, name: id.name}))
+							group by  i.id, i.name, i.secondary, i.mac_address;`	
+									
+			const iden = await db.any(idsql)
+			console.log('___',w,idsql,iden)				
+			const identifiers = iden.map( id => ({id: id.id, name: id.name,sons: id.sons,mac_address : id.mac_address, secondary : id.secondary }))
 			return {...w, identifiers}
 		}))
-		
+
 		const data = {
 			date : date,
 			data: lines
@@ -72,10 +74,10 @@ const exportWorkReport = async (req,res,entity) => {
 		if (lines.length) {
 
 			res.status(200).json(data)
-		
+
 			const ids = lines.map(x=>x.id).toString()
 
-			sql = `update mymes.${row_type}
+			sql = `update mymes.work_report
 				set sent = true
 				where id = any (ARRAY[${ids}]) returning 1`
 			db.any(sql).catch(e=> console.error(e))	
@@ -89,9 +91,72 @@ const exportWorkReport = async (req,res,entity) => {
 	}
 }
 
+const exportFaults = async (req,res) => {
+
+	const option = {year:'2-digit', month: '2-digit', day: "2-digit" }
+	const date = new Date().toLocaleDateString("he",option).replace(/-/g,'/')
+
+	let sql_fault =`select f.id as id ,extserial as serialname,rg.extname as locname,f.quant, loc.location, ft.name fault_type,
+					fix.name as fix, 
+						fs.sendable, 'fault' as row_type
+					from mymes.fault  f left join mymes.locations loc on loc.id = f.location_id
+						left join mymes.fix on fix.id = f.fix_id,
+						mymes.serials  s, mymes.actions  a, mymes.fault_type ft, mymes.fault_status fs,
+						mymes.resource_groups rg
+					where a.id = f.act_id
+						and rg.id = f.resource_id
+						and s.id = f.serial_id
+						and ft.id = f.fault_type_id
+						and fs.id = f.fault_status_id				
+						and extserial is not null
+						and erpact is not null
+						and fs.sendable = true
+						and (sent is null or sent is false);`				
+	try{
+		var lines = await db.any(sql_fault)
+		console.log("lines",lines)
+
+		lines = await Promise.all(lines.map( async w => {
+			const idsql = `select  il.parent_id as parent, i.id, i.name
+							from mymes.identifier i, mymes.identifier_links il
+							where i.id = il.identifier_id
+							and row_type = 'fault'
+							and il.parent_id = ${w.id};`				
+			const iden = await db.any(idsql)
+			const identifiers = iden.map( id => ({id: id.id, name: id.name}))
+			return {...w, identifiers}
+		}))
+
+		console.log(lines)
+		
+		const data = {
+			date : date,
+			faults : lines,
+		}
+
+		if (lines.length) {
+
+			res.status(200).json(data)
+		
+			var ids = lines.map(x=>x.id).toString()
+
+			sql = `update mymes.fault
+				set sent = true
+				where id = any (ARRAY[${ids}]) returning 1`
+			db.any(sql).catch(e=> console.error(e))					
+		}
+		else {
+			res.status(405).json({massage : 'no data found'})
+		}
+	}catch(e){
+		console.error("error in exportWorkReport : ",e)
+		res.status(406).json({error : e})
+	}
+}
+
 const importSerial = (req,res) => {
-	const part_schema = schemas['parts'].schema
-	const serial_schema = schemas['serials'].schema	
+	const part_schema = parts.schema
+	//const serial_schema = serials
  	var data = {}
   	try {
     data = JSON.parse(req.body.data)
@@ -209,6 +274,7 @@ const importSerial = (req,res) => {
 
 module.exports = {
     importSerial,
-    exportWorkReport,
+	exportWorkReport,
+	exportFaults,
     approveWorkReports
   }

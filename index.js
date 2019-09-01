@@ -24,7 +24,8 @@ const {
 const {
   importSerial,
   exportWorkReport,
-  approveWorkReports
+  exportFaults,
+  approveWorkReports,
 } = require('./models/ERPInterface')
 
 const {fetchDashData} = require('./models/Dash')
@@ -138,6 +139,7 @@ router.get('/notifications', (req,res) => User.authenticate(req,res,()=>fetchNot
 router.get('/routes', (req,res) => fetchRoutes(req, res))
 router.get('/dash', (req,res) => User.authenticate(req,res,()=>fetchDashData(req, res)))
 router.get('/exportWorkReport', (req,res) => exportWorkReport(req, res))
+router.get('/exportFaults', (req,res) => exportFaults(req, res))
 router.get('/workPaths', (req,res) => fetchWorkPaths(req, res))
 router.get('/fetchWR', (req,res) => fetchWR(req, res))
 
@@ -157,6 +159,7 @@ app.post('/mymes/test', (req,res) => {
 
 app.post('/mymes/importserial', (req,res) => importSerial(req,res))
 app.post('/mymes/approveWorkReports', (req,res) => approveWorkReports(req,res))
+app.post('/mymes/approveFaults', (req,res) => approveWorkReports(req,res,'fault'))
 app.post('/mymes/markNotificationAsRead', (req,res) => markNotificationAsRead(req,res))
 app.post('/mymes/changeUserLang', (req,res) => changeUserLang(req,res))
 app.use('/mymes', router);
