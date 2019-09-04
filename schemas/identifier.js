@@ -9,17 +9,29 @@ const {languagesArray} = require('./schema_conf.js')
 	schema.tables : the tables that need to be updated 
 */
 
-const updateParentIdentifiers = async (db,id,son_identifers) => {
-	console.log("~~~1:",id,son_identifers)
-	return await son_identifers.map(async (obj) => 
+const updateParentIdentifiers = async (db,id,params) => {
+	var iid = id
+
+	sids = Array.isArray(params.son_identifiers) ? params.son_identifiers : [params.son_identifiers]
+
+	if (!id) {
+		const do_exist = `select i.id from mymes.identifier i ,mymes.serials s
+						where s.name = '${params.serialname}'
+						and i.parent_id = s.part_id
+						and i.name = '${params.identifier}';`
+		iid =  await db.one(do_exist).then(x => x.id)
+		console.log(do_exist,iid,id)
+	}
+
+	return  await sids.map(async (obj) => 
 		Promise.all(Object.keys(obj).map( async parent => {
 
 			return await obj[parent].map(async identifier => {
 				const sql = `update mymes.identifier
-							set parent_identifier_id = ${id}
+							set parent_identifier_id = ${iid}
 							where name = '${identifier}'
 							and parent_id = (select id from mymes.part where name = '${parent}') returning 1;`
-							console.log("~~~2:",sql,parent,identifier,id)						 
+								 
 				return await db.one(sql)
 			})
 		})
@@ -38,7 +50,7 @@ exports.identifier = {
 			choosers :{}
 		},
 		
-		postInsertHelpers : [{func : updateParentIdentifiers ,parameters : ['son_identifiers']}],
+		postInsertHelpers : [{func : updateParentIdentifiers ,parameters : ['son_identifiers','serialname','identifier']}],
 
 		pre_delete: {
 			function: 'delete_identifier_link',

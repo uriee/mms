@@ -390,7 +390,11 @@ const insert = async (req, res, entity , mute = false) => {
 												});
 							
 		const pih = schemas[entity].postInsertHelpers &&  schemas[entity].postInsertHelpers.map(async PIH => {
-			const PIHparameters = PIH && PIH.parameters.map(x => params[x])
+			const PIHparameters = {}
+			PIH.parameters.forEach(x => {
+				PIHparameters[x] = params[x]
+			})
+			console.log("------",PIHparameters, PIH.parameters)
 			return PIH && PIHparameters && await PIH.func(db,new_id,PIHparameters)
 		})
 

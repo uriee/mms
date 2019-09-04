@@ -135,8 +135,10 @@ const fetchWR = async(request, response) =>{
 		const type = await db.any(typesql).then(x=>x)
 		const fix = await db.any(fixsql).then(x=>x)
 		const kit = await db.any(kitsql).then(x=>x)
-		const sonna = await db.any(sonnasql).then(x=>x)			
-        const son_identifiers = [...await db.any(son_identifiers_sql).then(x=>x) , ...sonna]
+		const sonna = await db.any(sonnasql).then(x=>x)	
+		const sons 	= await db.any(son_identifiers_sql).then(x=>x)
+
+        const son_identifiers = sons.length ? sons : sonna
 		response.status(200).json({main:{WR,type,fix,loc,son_identifiers,kit}})
 	}catch(e){
 		console.error(e)
