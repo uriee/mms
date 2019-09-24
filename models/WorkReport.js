@@ -60,26 +60,37 @@ const fetchWR = async(request, response) =>{
 		and loc.part_id = ser.part_id;`
 
 	const son_identifiers_sql = `select sp.name, b.coef, array_agg(i.name) as identifiers
-		from mymes.identifier i,
-			mymes.part pp,
-			mymes.part sp,
-			mymes.locations l,
-			mymes.bom b,
-			mymes.serials s,
-			mymes.actions a
-		where i.parent_id = sp.id
-			and l.part_id = pp.id
-			and b.parent_id = pp.id
-			and b.produce = true
-			and i.parent_identifier_id is null 
-			and l.part_id = b.parent_id
-			and l.partname = b.partname
-			and a.id = l.act_id
-			and sp.name = b.partname	
-			and s.part_id = pp.id
-			and a.name = '${actname}'
-            and s.name = '${serialname}'
-		group by sp.name, b.coef;`
+	from mymes.identifier i,
+		mymes.part pp,
+		mymes.part sp,
+		mymes.locations l,
+		mymes.bom b,
+		mymes.serials s,
+		mymes.actions a,
+		mymes.serials son_wo,
+		mymes.serial_act son_sa,
+		mymes.identifier_links il		
+	where i.parent_id = sp.id
+		and l.part_id = pp.id
+		and b.parent_id = pp.id
+		and b.produce = true
+		and i.parent_identifier_id is null 
+		and l.part_id = b.parent_id
+		and l.partname = b.partname
+		and a.id = l.act_id
+		and sp.name = b.partname	
+		and s.part_id = pp.id
+		and s.id = son_wo.parent_serial
+		and son_sa.serial_id = son_wo.id
+		and son_sa.pos in (select max(pos) from mymes.serial_act where serial_id = son_sa.serial_id )
+		and il.serial_id = son_sa.serial_id
+		and il.act_id = son_sa.act_id
+		and il.identifier_id = i.id		
+		and a.name = '${actname}'
+		and s.name = '${serialname}'
+	group by sp.name, b.coef;`
+
+
 
 	const sonnasql = 	`select sp.name, b.coef, array['N/A'] as identifiers
 	from mymes.part pp,
