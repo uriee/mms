@@ -13,7 +13,7 @@ exports.fault = {
 			all: `select fault.id, fault.name , fault_t.description,  
             serial.name as serialname, status.name as status_name, type.name as type_name ,fix.name as fix_name, 
             resource.name as resourcename , act.name as actname , sig_date, l.location as location, 
-            fault.tags, fault.close_date, fault.quant , users.username as username
+            fault.tags, fault.close_date, fault.quant , users.username as username, fault.sent, fault.approved
 			from mymes.fault as fault left join mymes.fault_t as fault_t on fault.id = fault_t.fault_id
 			left join mymes.fault_type as type on fault_type_id = type.id 
 			left join mymes.fix as fix on fix_id = fix.id 			

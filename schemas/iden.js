@@ -66,7 +66,7 @@ exports.iden = {
 							filterValue: 'parent_name',
 						},	
 						{
-							field: 'part_id',
+							field: 'parent_id',
 							fkey : 'part_id',
 							table: 'part',
 							filterField : 'name',
