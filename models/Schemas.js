@@ -92,13 +92,6 @@ const schemas = {
 	lot_swap,
 }
 
-/*
-const fillTemplate = function(templateString, templateVars){
-	
-    return new Function("return `"+templateString +"`;").call(templateVars);
-}
-*/
-
 const fetchTags = async(request, response) =>{
 	const sql = `select id::Integer,name,row_type,tags from mymes.tagable
 					where exists
@@ -112,13 +105,12 @@ const fetchTags = async(request, response) =>{
 	}
 }
 
-const fetchResources = async(request, response) =>{
-	const DBToTree = (resources,barnches) => {
-	    let raw = resources //JSON.parse(string)
+const fetchResources = async(response) =>{
+	const DBToTree = (resources) => {
+	    let raw = resources 
 	    let raw2 = [...raw]
 	    rg = raw.filter(x=> x.resource_ids)   
 		rg.map(ri => {
-			//ri.children = raw2.filter(r=> ri.resource_ids.includes(r.id))
 			ri.children = ri.resource_ids.map(r => raw2.filter(res=> res.id === r)[0])
 			raw = raw.filter(r=> !ri.resource_ids.includes(r.id))
 			return ri
@@ -178,14 +170,22 @@ const fetchNotifications = async(request, response) =>{
 		response.status(200).json(ret)
 	}
 }
-/*****
-/* getField: Enables the schema fields field property to be a Function or a String
-*****/
+
+/**
+ * getField: Enables the schema fields field property to be a Function or a String
+ * @param {*} field - the value of the field (might be a function)
+ * @param {*} flag - the parameter to feed the function
+ */
 const getField = (field,flag) => typeof field === 'function' ? field(flag || 0) : field
 
-/*
-Populate the response data from DB with the requested data of a certain entity
-*/
+
+/**
+ *  Populate the response data from DB with the requested data of a certain entity
+ * @param {*} request 
+ * @param {*} response 
+ * @param {*} entity 
+ * @returns {Object} (main : the data of the main table, choosers : the choose lists to populate the input forms of this schema )
+ */
 const fetch = async (request, response, entity) => {
 	const {lang/*pageSize,currentPage*/,zoom,name,parent,user,flag,parentSchema} = request.query
 
@@ -222,6 +222,10 @@ const fetch = async (request, response, entity) => {
 		}
 }
 
+/**
+ * @param {*} query 
+ * @returns {Promise} the query result
+ */
 const runQuery = async (query) => {
 	try{
 		return await db.any(query).then(x => x)
@@ -231,6 +235,12 @@ const runQuery = async (query) => {
 	}
 }
 
+
+/**
+ * @param {*} fkeys - the fkeys quries from the schemas
+ * @param {*} params - the parameters to feed the quries
+ * @returns {Object} - the queries results (the Keys)
+ */
 const getFkeys = async (fkeys,params) => {
 
 	const keys = {}
@@ -238,8 +248,6 @@ const getFkeys = async (fkeys,params) => {
 		const fkeysNames = Object.keys(fkeys)
 		const keyValues = await Promise.all(fkeysNames.map(async (key) => {
 			const query = fkeys[key]	
-			/*const parameter = Array.isArray(params[query.value]) ? params[query.value].toString() :
-								[params[query.value]]*/
 			const parameters = Array.isArray(query.value) ? 
 				query.value.map(value =>  Array.isArray(params[value]) ? params[value].toString() :	params[value]) :
 				Array.isArray(params[query.value]) ? params[query.value].toString() :[params[query.value]]
@@ -264,16 +272,33 @@ const getFkeys = async (fkeys,params) => {
 	return keys;
 }
 
-
+/**
+ * 
+ * @param {*} params - the data to be inseted
+ * @param {*} schema - the main table that the raw will be inserted to
+ * @returns id of the inserted row 
+ */
 const InsertToTables = async (params,schema) => {
 	const keys = await getFkeys(schema.fkeys,params)
 	const tables = Object.keys(schema.tables)
 	const chain = schema.chain
+	const chain_pre = schema.chain_pre
 	const isPublic = !!schema.public
 	const id  = schema.pkey
 	var new_id = 0    
-	/*Check to see if all required fields has value*/
 
+	if (chain_pre && Array.isArray(chain_pre)) {
+		try{
+		var mute
+		const Chain_pre_Insert =  await Promise.all(chain_pre.map(async (chainSchema) => await insert({body : {...params, parent : new_id.id}}, null , chainSchema , mute = true)))
+		}catch(err) {
+			console.error("pre_chain:",err)
+			if (!mute) res.status(406).json({error: 'pre_chain : '+err})
+			throw new Error("PreChian fault")
+		}
+	}
+
+	/*Check to see if all required fields has value*/	
 	const required = tables.reduce(
 		(ret,table) => ret + schema.tables[table].fields.filter(field => field.required).reduce(
 			(o,field)=>{
@@ -341,6 +366,15 @@ const InsertToTables = async (params,schema) => {
 	return new_id && new_id.id
 }
 
+
+/**
+ * 
+ * @param {Object} req 
+ * @param {Object} res 
+ * @param {text} entity - the schema type
+ * @param {boolean} mute - if true  will suppress any answer to the client.
+ * @returns {integer} - the id of the raw.
+ */
 const insert = async (req, res, entity , mute = false) => {
 	let params = {}
 	Object.keys(req.body).forEach(x=> params[x] = typeof req.body[x] === 'string' ?  req.body[x].replace(/'/g,"") : req.body[x]) //Protection againt sql injection
@@ -407,6 +441,12 @@ const insert = async (req, res, entity , mute = false) => {
 	}
 }
 
+/**
+ * 
+ * @param {Object} req 
+ * @param {Object} res 
+ * @param {Text} entity - the schema type
+ */
 const update = async (req, res, entity) => {
 	let params = {}
 	Object.keys(req.body).forEach(x=> params[x] = typeof req.body[x] === 'string' ?  req.body[x].replace(/'/g,"") : req.body[x]) //Protection againt sql injection
@@ -526,7 +566,7 @@ const func = async (req, res, entity) => {
 
 }
 
-const runFunc = async (req, res, funcname) => {
+const runFunc = async (req, res, funcName) => {
 	let { params } = req.body
 	try {
    	const ret  = await db.func(funcName, params)
@@ -538,9 +578,13 @@ const runFunc = async (req, res, funcname) => {
 	}
 }
 
-/***
-* @param : body => {table => table name,data => data rows to insert}
-****/
+
+/**
+ * uses the batchIinsert_ function independently
+ * @param {Object} req 
+ * @param {Object} res 
+ * @param {Text} entity 
+ */
 const batchInsert = async (req,res,entity) => {
 	try {
 		const ret = await Promise.all(await batchInsert_(req.body.data,entity))
@@ -551,6 +595,12 @@ const batchInsert = async (req,res,entity) => {
 	}	
 }
 
+/**
+ * Insert more then one row to a schemas table
+ * @param {*} data 
+ * @param {*} entity 
+ * @returns {Promise}
+ */
 const batchInsert_ = async (data,entity) => {
 	const schema = schemas[entity].schema
 	var ret = null

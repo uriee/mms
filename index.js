@@ -133,7 +133,7 @@ app.post('/mymes/importdata', (req,res) => batchInsert(req,res,getEntity(req.bod
 
 router.get('/fetch', async (req,res) => await User.authenticate(req,res,() => fetch(req,res,getEntity(req.query.entity)))) 
 router.get('/tags', async (req,res) => await User.authenticate(req,res,() => fetchTags(req, res, 'tags'))) 
-router.get('/resources', async (req,res) => await User.authenticate(req,res,() => fetchResources(req, res))) 
+router.get('/resources', async (req,res) => await User.authenticate(req,res,() => fetchResources(res))) 
 //router.get('/notifications', (req,res) => fetchNotifications(req, res))
 router.get('/notifications', (req,res) => User.authenticate(req,res,()=>fetchNotifications(req, res),status=208)) 
 router.get('/routes', (req,res) => fetchRoutes(req, res))
