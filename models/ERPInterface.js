@@ -154,6 +154,44 @@ const exportFaults = async (req,res) => {
 	}
 }
 
+const aline = async (aline,serial_id) => {
+	return aline && aline.map(async (al) => {
+		console.log("in aline:",al,serial_id)
+		let wr_id = 0;
+		const wr_param = {
+			serialname : al.SERIALNAME,
+			actname : al.ACTNAME,
+			quant : al.QUANT,
+			row_type : 'work_report',
+			sent : true,
+			approved : true,
+			sig_date: 0,
+			sig_user : 'ERP',
+			resourcename : 'ERP'
+		}	
+
+		try {
+
+			console.log("INSERT WO _  ",wr_param)
+			wr_id = await insert({body : wr_param},null,'work_report',true) //await InsertToTables(wr_param,wr_schema)
+			console.log("INSERT WO _ 2",wr_id)
+		}catch(e){
+			throw new Error(`there was aproblem inseting a work report  ${al.SERIALNAME}:${al.ACTNAME} :: ${e}`)
+		}
+					
+
+		if (al.IDENTIFIERS && al.IDENTIFIERS !== 'NONE' ) {
+	
+			const identifiers = al.IDENTIFIERS.map(idn =>({identifier : idn.SERNUM , parent : wr_id, parent_schema : 'work_report'})) 
+			try{
+				const ret = await batchInsert_(identifiers,'identifier')
+			}catch(e){throw new Error(`Error in inserting work report identifiers: ${e}`)}
+		}
+		return wr_id
+
+	})
+}
+
 const importSerial = (req,res) => {
 	const part_schema = parts.schema
 	//const serial_schema = serials
@@ -186,11 +224,12 @@ const importSerial = (req,res) => {
 
 	    const partAllreadyExists = part_id > 0 
 
-
 	    if(serial_id) {
-	    	console.warn('all ready exists')
+	    	console.warn('all ready exists',serial_id,part_id)
 			serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1,lot: x.LOT, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
-			const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,'kit')) : []			   	
+			//const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,'kit')) : []	
+			const aline1 = await aline(serial.ALINE,serial.SERIAL.SERIALNAME)
+
 	    }
 	    else{
 	    	try {
@@ -263,6 +302,7 @@ const importSerial = (req,res) => {
 				}
 				serial.KIT = serial.KIT && serial.KIT.map(x => ({ lang_id: 1,lot: x.LOT, partname: x.PARTNAME, quant: x.QUANT,  parent : serial_id}))
 				const kit = serial.KIT && serial.KIT.length ? await Promise.all( await batchInsert_(serial.KIT,'kit')) : []
+				const aline1 = await aline(serial.ALINE,serial_id)
 			}catch(e){
 				console.error('error in importSerial : ',e)
 			}	

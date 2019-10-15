@@ -21,7 +21,7 @@ exports.work_report = {
 					and action.id = work_report.act_id 
 					and sa.serial_id = work_report.serial_id 
 					and sa.act_id = work_report.act_id
-					and resources.id in (select resource from user_resources_by_parent($4))
+					and (resources.id = -1 or resources.id in (select resource from user_resources_by_parent($4)))
 					and ($3 = 0 or serial.id = $3) 
 					`,					
 			final: 'order by work_report.sig_date desc ',
