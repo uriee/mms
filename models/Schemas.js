@@ -256,7 +256,6 @@ const getFkeys = async (fkeys,params) => {
 			var res = query.hasOwnProperty('query') ?
 						await db.any(query.query, parameters).then(x => Array.isArray(x)? x.map(x=> x.id) : x.id).then(x => x.length == 0 ? query.default : x ) :
 					    params[query.value]
-						console.log('********************************************',params[query.value],query,res)
 			return res
 		})).then(x => x)
 
@@ -309,7 +308,7 @@ const InsertToTables = async (params,schema) => {
 	const maintable = schema.tables[tables[0]]
 	const insertFields = maintable.fields.filter(x => x.field && (x.value || keys[x.fkey]>'' || params[x.variable]))
 	let fields = insertFields.map(x => getField(x.field,params['flag']))
-	console.log('Inser5t params',params,insertFields,fields)	
+	//console.log('Inser5t params',params,insertFields,fields)	
 	let values = insertFields
 				.map(x => {
 
@@ -354,6 +353,7 @@ const InsertToTables = async (params,schema) => {
 	
 	var new_id = await db.tx( async t => {
 		new_key = await t.oneOrNone(mainTableSql)
+		console.log(sqls)
 		const c = new_key && await Promise.all(sqls.map(sql => t.any(sql,[new_key.id])))
 		return new_key
 	}).catch(error => {
@@ -611,7 +611,8 @@ const batchInsert_ = async (data,entity) => {
 			Object.keys(params).forEach(x => {
 				params[x] = Array.isArray(params[x]) ? (params[x].length === 1 ? `{${params[x][0]}}` : `{${params[x]}}`) : params[x]
 			})
-			return await InsertToTables(params,schema)
+			//return await InsertToTables(params,schema)
+			return await insert({body : params},null,entity,true)
 		})
 		return ret
 	}catch(err){
