@@ -472,7 +472,7 @@ const update = async (req, res, entity) => {
 			allParams[key] =  Array.isArray(value) ? `{${value}}` : value
 			})
 
-		const ret = Promise.all(tableNames.filter(tn => tables[tn].fields.some(field => allParams.hasOwnProperty(getField(field.field,params['flag']))))
+		const ret = await Promise.all(tableNames.filter(tn => tables[tn].fields.some(field => allParams.hasOwnProperty(getField(field.field,params['flag']))))
 				  .map(tn =>{
 				  	const table = schema.tables[tn]
 				  	const sets = table.fields.filter(field => {
@@ -490,7 +490,7 @@ const update = async (req, res, entity) => {
 				  	const sqlWhere = wheres.reduce((old,where) => old + `${where.where} = '${where.equals}' and `,'').slice(0,-5)
 				  	const sql = `update ${!isPublic ? 'mymes.' : ''}${tn} set ${sqlSet} where ${sqlWhere} returning 1;`
 				  	console.log("update sql:",sql)
-				  	const ret  = runQuery(sql)
+				  	const ret  =  runQuery(sql)
 				  	return ret
 		}))
 

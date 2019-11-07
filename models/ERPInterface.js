@@ -243,7 +243,8 @@ const importSerial = (req,res) => {
 				    		revision: serial.PART.REVISION,
 				    		doc_revision: serial.PART.DOCREV,
 				    		row_type : 'part',
-				    		description : serial.PART.PARTDES,
+							description : serial.PART.PARTDES,
+							serialize : serial.PART.SERNFLAG,
 				    		lang_id :  1,
 				    	}
 						part_id = await InsertToTables(partParams,part_schema)
