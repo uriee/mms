@@ -28,6 +28,13 @@ const {
   approveWorkReports,
 } = require('./models/ERPInterface')
 
+const {
+  exportSchemas,
+  exportFields,
+  insertTrigger,
+  deleteTrigger
+} = require('./models/EventTrigger')
+
 const {fetchDashData} = require('./models/Dash')
 
 const { 
@@ -110,6 +117,9 @@ app.post('/mymes/update', (req,res) => User.authenticate(req,res,() => update(re
 app.post('/mymes/insert', (req,res) => req.body.entity === 'user' ? User.signup(req,res) : User.authenticate(req,res,() => insert(req,res,getEntity(req.body.entity))))
 app.post('/mymes/func', (req,res) => User.authenticate(req,res,() => func(req,res,getEntity(req.body.entity))))
 
+app.post('/mymes/insertTrigger', (req,res) => req.body.entity === 'user' ? User.signup(req,res) : User.authenticate(req,res,() => insertTrigger(req,res)))
+app.post('/mymes/deleteTrigger', (req,res) => req.body.entity === 'user' ? User.signup(req,res) : User.authenticate(req,res,() => deleteTrigger(req,res)))
+
 app.post('/mymes/updateroutes', async (req,res) => {
     try{
       await runQuery(`update routes set routes = '${req.body.routes}'`)
@@ -142,6 +152,8 @@ router.get('/exportWorkReport', (req,res) => exportWorkReport(req, res))
 router.get('/exportFaults', (req,res) => exportFaults(req, res))
 router.get('/workPaths', (req,res) => fetchWorkPaths(req, res))
 router.get('/fetchWR', (req,res) => fetchWR(req, res))
+router.get('/fetchTriggersSchemas', (req,res) => exportSchemas(req, res))
+router.get('/fetchTriggersFields', (req,res) => exportFields(req, res))
 
 app.post('/mymes/bug', (req,res) => bugInsert(req,res))
 
