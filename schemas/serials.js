@@ -114,7 +114,7 @@ exports.serials = {
 						{
 							field: 'row_type',
 							variable : 'row_type',
-							value : 'serial'
+							value : 'serials'
 						},						
 						{
 							field: 'tags',

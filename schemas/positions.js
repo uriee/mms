@@ -51,7 +51,7 @@ exports.positions = {
 						{
 							field: 'row_type',
 							variable : 'row_type',
-							value : 'position'
+							value : 'positions'
 						},						
 						{
 							field: 'tags',

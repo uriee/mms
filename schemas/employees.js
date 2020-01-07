@@ -95,7 +95,7 @@ exports.employees = {
 						{
 							field: 'row_type',
 							variable : 'row_type',
-							value : 'employee'
+							value : 'employees'
 						},
 						{
 							field: 'delivery_method',

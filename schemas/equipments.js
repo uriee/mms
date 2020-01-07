@@ -69,7 +69,7 @@ exports.equipments = {
 						{
 							field: 'row_type',
 							variable : 'row_type',
-							value : 'equipment'
+							value : 'equipments'
 						},						
 						{
 							"field": "tags",

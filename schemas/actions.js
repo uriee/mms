@@ -55,7 +55,7 @@ exports.actions = {
 						{
 							field: 'row_type',
 							variable : 'row_type',
-							value : 'action'
+							value : 'actions'
 						},						
 						{
 							field: 'tags',

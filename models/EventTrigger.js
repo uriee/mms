@@ -95,7 +95,7 @@ const exportSchemas = async(req, res) =>{
 	const sql = `select distinct table_name from information_schema.tables,information_schema.triggers 
     where table_schema = 'mymes'
     and event_object_table = table_name
-    and trigger_name = 'events_trigger_insert';
+    and trigger_name like 'events_trigger%';
  `
 	try{
 		const ret =  await db.any(sql).then(x=>x)	
@@ -195,19 +195,16 @@ const getConditionsSQL = async (trigger,table_id) => {
         AND tc.table_name <> ccu.table_name;`
     const allFKeys =  await db.any(sql).then(x=>x)
     const fkeys = allFKeys.filter(x=> tables.includes(x.foreign_table_name))
-    console.log("######################::::::::::      ",fkeys)                
+   
     return fkeys.map(x => {
       x.table_schema = x.table_name === table_id ? '' : x.table_schema+'.'      
       x.table_name = x.table_name === table_id ? '$1' : x.table_name
       x.foreign_table_schema = x.table_name === table_id ? '' : x.foreign_table_schema+'.'
       x.foreign_table_name = x.table_name === table_id ? '$1' : x.foreign_table_name
-      console.log("~~~~~~~~~~~~~0000:",x)
-      return `and ${x.table_schema}${x.table_name}.${x.column_name} = ${x.foreign_table_schema}${x.foreign_table_name}.${x.foreign_column_name}`/*.replace(table_id,'$1')*/
+      return `and ${x.table_schema}${x.table_name}.${x.column_name} = ${x.foreign_table_schema}${x.foreign_table_name}.${x.foreign_column_name}`
     }) 
   }))
   const whereLinks = whereLinksArr.flat().reduce((z,x) => `${z} ${x || ''}` ,'')
-  console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~123::::",whereLinks)
-  /*const whereLinks = whereLinksArr.flat().reduce((z,x) => `${z} ${x.replace(table_id,'$1') || ''}` ,'')*/
   
   const getOV = (operator,value,tableField) => {
     let ret
@@ -234,7 +231,7 @@ const getConditionsSQL = async (trigger,table_id) => {
        break;      
       default: ret = `${fieldName} ${operator} ''${value}''`
     }
-    console.log("______________",operator,value,fieldName,ret)
+
     return ret
   }
 
@@ -259,14 +256,13 @@ const getConditionsSQL = async (trigger,table_id) => {
 
 const insertTrigger = async(req, res) =>{
   const data = req.body
-  console.log("INSERTTRRIGGER::",req.body)
 
   const {insertSQL, updateSQL} = await getConditionsSQL(data.conditions,data.table_id)
 
 
   const sql = `insert into mymes.event_triggers (name,active,message_text,queues,error,del,table_id,conditions,user_name,update_sql,insert_sql)
-               values('${data.name}',${data.active},'${data.message_text}','{${data.queues}}',${data.error},${data.del},'${data.table_id}','${JSON.stringify(data.conditions)}','${data.user}','${updateSQL}','${insertSQL}') returning id;  `
-               console.log("JJJJJ::: ",sql)
+               values('${data.name}',${data.active},'${data.message_text.replace(new RegExp("'", 'g'), "''")}','{${data.queues}}',${data.error},${data.del},'${data.table_id}','${JSON.stringify(data.conditions)}','${data.user}','${updateSQL}','${insertSQL}') returning id;  `
+               
 	try{
     if(data.id > 0)  await db.one(`delete from mymes.event_triggers where id = ${data.id}`).then(x=>x)
 		const ret =  await db.one(sql).then(x=>x)	
@@ -280,10 +276,8 @@ const insertTrigger = async(req, res) =>{
 
 const deleteTrigger = async(req, res) =>{
   const data = req.body
-  console.log("DEELEETEERRIGGER::",req.body)
 
   const sql = `delete from mymes.event_triggers where id = ${data.id} returning id; `
-               console.log("JJJJJ::: ",sql)
 	try{
 		const ret =  await db.one(sql).then(x=>x)	
         res.status(205).json({ret})

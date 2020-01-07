@@ -86,7 +86,7 @@ exports.malfunctions = {
 						{
 							field: 'row_type',
 							variable : 'row_type',
-							value : 'malfunction'
+							value : 'malfunctions'
 						},
 						{
 							key: 'id'

@@ -71,7 +71,7 @@ exports.resource_groups = {
 						{
 							field: 'row_type',
 							variable : 'row_type',
-							value : 'resource_group'
+							value : 'resource_groups'
 						},	
 						{
 							field: 'resource_ids',

@@ -6,6 +6,7 @@ const {
   insert,
   remove,
   fetchNotifications,
+  fetchInToDynamicSelect,
   fetchRoutes,
   fetchTags,
   fetchResources,
@@ -154,6 +155,7 @@ router.get('/workPaths', (req,res) => fetchWorkPaths(req, res))
 router.get('/fetchWR', (req,res) => fetchWR(req, res))
 router.get('/fetchTriggersSchemas', (req,res) => exportSchemas(req, res))
 router.get('/fetchTriggersFields', (req,res) => exportFields(req, res))
+router.get('/fetchInToDynamicSelect', (req,res) => fetchInToDynamicSelect(req, res))
 
 app.post('/mymes/bug', (req,res) => bugInsert(req,res))
 

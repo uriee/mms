@@ -53,7 +53,7 @@ exports.mnt_plans = {
 						{
 							field: 'row_type',
 							variable : 'row_type',
-							value : 'mnt_plan'
+							value : 'mnt_plans'
 						},						
 						{
 							field: 'tags',

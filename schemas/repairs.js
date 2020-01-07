@@ -90,7 +90,7 @@ exports.repairs = {
 						{
 							field: 'row_type',
 							variable : 'row_type',
-							value : 'repair'
+							value : 'repairs'
 						},											
 						{
 							key: 'id'

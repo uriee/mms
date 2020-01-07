@@ -105,6 +105,17 @@ const fetchTags = async(request, response) =>{
 	}
 }
 
+const fetchInToDynamicSelect = async(req, res) =>{
+	const {schema , like} = req.query
+	const sql = `select distinct name from mymes.${schema}  where name like '%${like}%' ; `
+	try{
+		const ret =  await db.any(sql).then(x=>x.map(y=>y.name))	
+        res.status(200).json({main : ret})
+	}catch(e){
+		console.error(e)
+	}
+}
+
 const fetchResources = async(response) =>{
 	const DBToTree = (resources) => {
 	    let raw = resources 
@@ -361,7 +372,10 @@ const InsertToTables = async (params,schema) => {
 			throw new Error(error)
 	});
 
-	const ChainInsert = chain && chain.map(async (chainSchema) => await insert({body : {...params, parent : new_id.id}}, null , chainSchema , mute = true))
+	const ChainInsert = chain && await Promise.all(chain.map(async (chainSchema) => await insert({body : {...params, parent : new_id.id}}, null , chainSchema , mute = true))).catch(error => {
+		console.error(error)
+		throw new Error(error)
+		})
 	
 	return new_id && new_id.id
 }
@@ -404,7 +418,7 @@ const insert = async (req, res, entity , mute = false) => {
 		}catch(err) {
 			console.error("pre_insert:",err)
 			if (!mute) res.status(406).json({error: 'pre_insert : '+err})
-			throw new Error("PreInsert fault")
+			throw new Error(err)
 		}
 	
 	try{											    
@@ -655,5 +669,5 @@ const batchUpdate = async (body,res) => {
 
 module.exports = {
   fetch, fetchRoutes, fetchResources, fetchTags, update, batchUpdate, batchInsert, batchInsert_,  insert, remove,
-  runQuery ,runFunc, func, fetchNotifications, InsertToTables
+  runQuery ,runFunc, func, fetchNotifications, InsertToTables, fetchInToDynamicSelect
 }
